@@ -45,7 +45,7 @@ def calc_price():
     x = preprocess_data(request)
     pred = model.predict(x)
 
-    return jsonify(pred)
+    return jsonify({'price': pred})
 
 
 if __name__ == "__main__":
