@@ -8,4 +8,6 @@ WORKDIR /opt/service
 COPY server.py server.py
 COPY weights.cbm weights.cbm
 
+EXPOSE 5000
+
 CMD python server.py
