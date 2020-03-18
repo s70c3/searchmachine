@@ -9,7 +9,7 @@ def preprocess_data(request):
     size = request.args.get('size')
     mass = float(request.args.get('mass'))
     material = request.args.get('material')
-    sum_ops_time = float(request.args.get('sum_ops_time'))
+    #sum_ops_time = float(request.args.get('sum_ops_time'))
 
     mul = lambda arr: arr[0] * mul(arr[1:]) if len(arr) > 1 else arr[0]
     calc_dims = lambda s: list([float(x) for x in s.lower().split('х')])
@@ -24,11 +24,11 @@ def preprocess_data(request):
     log_volume = log1p(mul(calc_dims(size)))
     log_mass = log(mass)
     sqrt_mass = sqrt(mass)
-    sum_ops_time = sum_ops_time
+    #sum_ops_time = sum_ops_time
     density = mass / mul(calc_dims(size))  # mass / volume
     material_category = materials[get_material(material)]
 
-    return [size2, size3, log_volume, log_mass, sqrt_mass, sum_ops_time, density, material_category]
+    return [size2, size3, log_volume, log_mass, sqrt_mass, density, material_category]
 
 
 def load_model(model_path):
