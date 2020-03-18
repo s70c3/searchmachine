@@ -40,7 +40,7 @@ def load_model(model_path):
 @app.route("/calc_price/", methods=['POST'])
 def calc_price():
     # current model columns
-    # ['size2', 'size3', 'log_volume', 'log_mass', 'sqrt_mass', 'sum_time', 'density', 'material_category', 'log_price']
+    # ['size2', 'size3', 'log_volume', 'log_mass', 'sqrt_mass', 'sum_time', 'density', 'material_category']
 
     x = preprocess_data(request)
     pred = model.predict(x)
