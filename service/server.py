@@ -1,6 +1,12 @@
+import pickle
+from random import randint
 from math import log1p, log, sqrt, exp
 from flask import Flask, request, jsonify
+import numpy as np
 from catboost import CatBoostRegressor
+import torch
+import torch.nn as nn
+
 
 app = Flask(__name__)
 
@@ -30,13 +36,60 @@ def preprocess_data(request):
     return [size2, size3, log_volume, log_mass, sqrt_mass, density, material_category]
 
 
-def load_model(model_path):
+def operations_vector_to_names(operations_vector):
+    # load categories names
+    operations_names = np.array(pickle.load(open('./categories_names.pkl', 'rb')))
+    sigmoid = lambda x: 1/(1 + np.exp(-x))
+    
+    # calc 1 class elements
+    operations_vector = sigmoid(operations_vector.detach().cpu().numpy())
+    #print('opers probs:', list(map(lambda x: round(x, 3), operations_vector)))
+    threshold = 0.73
+    operations_vector = (operations_vector > threshold).astype(np.int)
+    
+    # map to names
+    ixs = np.where(operations_vector == 1)[0]
+    names = operations_names[ixs][:3]
+    # beutify
+    names = list(map(lambda n: {'title': n}, names))
+    
+    return names    
+    
+
+def load_model_price(model_path):
     model = CatBoostRegressor()
     model = model.load_model(model_path)
     return model
 
 
-@app.route("/calc_price/", methods=['POST'])
+def load_model_operations(model_path):
+    class DetailsOpsModel(nn.Module):
+        def __init__(self, dim_in, dim_hidden, hidden_layers, dim_out):
+            super(DetailsOpsModel, self).__init__()
+
+            def block(dim_in, dim_out):
+                return nn.Sequential(nn.Linear(dim_in, dim_out),
+                                     nn.LeakyReLU(0.5),
+                                     nn.Dropout(0.2))
+
+            self.fc = nn.Sequential(block(dim_in, dim_hidden),
+                                    *[block(dim_hidden, dim_hidden) for _ in range(hidden_layers)],
+                                    block(dim_hidden, dim_out),
+                                    nn.Linear(dim_out, dim_out),
+                                    nn.Sigmoid())
+
+        def forward(self, x):
+            x = self.fc(x)
+            return x
+    
+    # in hid_size hid_layers out
+    model = DetailsOpsModel(6, 30, 2, 58)
+    #model.load_state_dict(torch.load(model_path))
+    
+    return model
+
+
+@app.route("/calc_detail/", methods=['POST'])
 def calc_price():
     # current model columns
     # ['size2', 'size3', 'log_volume', 'log_mass', 'sqrt_mass', 'sum_time', 'density', 'material_category']
@@ -52,12 +105,13 @@ def calc_price():
     except KeyError:
         return jsonify({'error': 'invalid detail data. Unknown material', 'price': None})
 
-    pred = model.predict(x)
-    price = round(exp(pred), 2)
-    return jsonify({'price': price})
+    price = round(exp(model_price.predict(x)), 2)
+    operations = operations_vector_to_names(model_operations(torch.tensor(x[:-1])))
+
+    return jsonify({'price': price, "techprocesses": operations})
 
 
 if __name__ == "__main__":
-    model = CatBoostRegressor()
-    model = model.load_model('weights.cbm')
-    app.run(debug=False, host='0.0.0.0')
+    model_price = load_model_price('./weights.cbm') 
+    model_operations = load_model_operations('./weights_detail2operation.pt')
+    app.run(debug=False, host='127.0.0.1', port=randint(4000, 8000))
