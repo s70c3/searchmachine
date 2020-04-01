@@ -13,9 +13,9 @@ app = Flask(__name__)
 
 def preprocess_data(request):
     sep = '/'
-    size = request.form.get('size').lower().replace('х', sep).replace('x', sep)
-    mass = float(request.form.get('mass').replace(',', '.'))
-    material = request.form.get('material')
+    size = request.args.get('size').lower().replace('х', sep).replace('x', sep)
+    mass = float(request.args.get('mass').replace(',', '.'))
+    material = request.args.get('material')
 
     mul = lambda arr: arr[0] * mul(arr[1:]) if len(arr) > 1 else arr[0]
     calc_dims = lambda s: list([float(x) for x in s.split(sep)])
@@ -95,7 +95,7 @@ def calc_price():
     # ['size2', 'size3', 'log_volume', 'log_mass', 'sqrt_mass', 'sum_time', 'density', 'material_category']
 
     params = ('size', 'mass', 'material')
-    if not all([item in request.form for item in params]):
+    if not all([item in request.args for item in params]):
         return jsonify({'error': 'not enough detail parameters in request', 'price': None})
  
     try:
@@ -114,4 +114,4 @@ def calc_price():
 if __name__ == "__main__":
     model_price = load_model_price('./weights.cbm') 
     model_operations = load_model_operations('./weights_detail2operation.pt')
-    app.run(debug=False, host='127.0.0.1', port=randint(4000, 8000))
+    app.run(debug=False, host='127.0.0.1', port=5022)
