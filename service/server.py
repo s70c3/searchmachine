@@ -1,5 +1,6 @@
 import pickle
 from random import randint
+import os
 from math import log1p, log, sqrt, exp
 from flask import Flask, request, jsonify
 import numpy as np
@@ -109,6 +110,12 @@ def calc_price():
     operations = operations_vector_to_names(model_operations(torch.tensor(x[:-1])))
 
     return jsonify({'price': price, "techprocesses": operations})
+
+
+@app.route("/turnoff/", methods=['POST'])
+def turnoff():
+    os.system('kill $PPID')
+
 
 
 if __name__ == "__main__":
