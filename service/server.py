@@ -12,13 +12,13 @@ app = Flask(__name__)
 
 
 def preprocess_data(request):
-    sep = '/'
-    size = request.args.get('size').lower().replace('х', sep).replace('x', sep)
+    sep = '-'
+    size = request.args.get('size').lower()
     mass = float(request.args.get('mass').replace(',', '.'))
     material = request.args.get('material')
 
     mul = lambda arr: arr[0] * mul(arr[1:]) if len(arr) > 1 else arr[0]
-    calc_dims = lambda s: list([float(x) for x in s.split(sep)])
+    calc_dims = lambda s: sorted(list([float(x) for x in s.split(sep)]))
     get_material = lambda s: s.split()[0].lower()
     materials = {'лист': 1,
                  'рулон': 2,
