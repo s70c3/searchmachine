@@ -7,6 +7,8 @@ import numpy as np
 from catboost import CatBoostRegressor
 import torch
 import torch.nn as nn
+from pdf2image.exceptions import PDFPageCountError
+from pdf2image import convert_from_path, convert_from_bytes
 
 
 app = Flask(__name__)
@@ -41,21 +43,21 @@ def operations_vector_to_names(operations_vector):
     # load categories names
     operations_names = np.array(pickle.load(open('./categories_names.pkl', 'rb')))
     sigmoid = lambda x: 1/(1 + np.exp(-x))
-    
+
     # calc 1 class elements
     operations_vector = sigmoid(operations_vector.detach().cpu().numpy())
     #print('opers probs:', list(map(lambda x: round(x, 3), operations_vector)))
     threshold = 0.73
     operations_vector = (operations_vector > threshold).astype(np.int)
-    
+
     # map to names
     ixs = np.where(operations_vector == 1)[0]
     names = operations_names[ixs][:3]
     # beutify
     names = list(map(lambda n: {'title': n}, names))
-    
-    return names    
-    
+
+    return names
+
 
 def load_model_price(model_path):
     model = CatBoostRegressor()
@@ -82,11 +84,11 @@ def load_model_operations(model_path):
         def forward(self, x):
             x = self.fc(x)
             return x
-    
+
     # in hid_size hid_layers out
     model = DetailsOpsModel(6, 30, 2, 58)
     #model.load_state_dict(torch.load(model_path))
-    
+
     return model
 
 
@@ -98,7 +100,7 @@ def calc_price():
     params = ('size', 'mass', 'material')
     if not all([item in request.args for item in params]):
         return jsonify({'error': 'not enough detail parameters in request', 'price': None})
- 
+
     try:
         x = preprocess_data(request)
     except ValueError:
@@ -117,8 +119,24 @@ def turnoff():
     os.system('kill $PPID')
 
 
+@app.route("/sendfile/", methods=['POST'])
+def handle():
+    if 'paper' not in request.files:
+        return jsonify({'error': 'Cant get file from request. Maybe u should use \'paper\'\
+                                  as attached file name', 'price': None})
+    try:
+        file = request.files['paper'].stream.read() # flask FileStorage object
+        img = convert_from_bytes(file)[0]
+
+    except PDFPageCountError:
+        return jsonify({'error': 'Given file is not a pdf file. Internal converting error', 'price': None})
+
+    img.save('./recieved_files/paper.pdf')
+    return jsonify({'ok': 'File saved', 'price': None})
+
+
 
 if __name__ == "__main__":
-    model_price = load_model_price('./weights.cbm') 
+    model_price = load_model_price('./weights.cbm')
     model_operations = load_model_operations('./weights_detail2operation.pt')
     app.run(debug=False, host='127.0.0.1', port=5022)
