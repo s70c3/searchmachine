@@ -192,16 +192,16 @@ def calc_price():
             img = try_get_attached_pdf_img()
             linsizes = ocr.extract_sizes(img)
             price = predict_tabular_paper(x, linsizes) #round(exp(model_tabular_paper.predict(x)), 2)
-            info = {'predicted_by': ['weight-size characteristics and linear sizes data from scheme']}
+            info = {'predicted_by': [{'tabular': True}, {'scheme': True}]}
         except PDFPageCountError:
             cant_open_pdf = True
 
     # no paper attached or fallback to tabular prediction
     if len(request.files) == 0 or cant_open_pdf:
         price = predict_tabular(x) #round(exp(model_tabular.predict(x)), 2)
-        info = {'predicted_by': ['weight-size characteristics']}
+        info = {'predicted_by': [{'tabular': True}, {'scheme': False}]}
         if cant_open_pdf:
-            info['predicted_by'].append('Tried read data from pdf. Convertion error occured')
+            info['predicted_by'].append({'error': 'Tried read data from pdf. Convertion error occured'})
 
     operations = operations_vector_to_names(model_operations(torch.tensor(preprocess_data_old(request)[:-1])))
 
