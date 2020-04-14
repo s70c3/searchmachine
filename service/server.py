@@ -11,6 +11,29 @@ from pdf2image.exceptions import PDFPageCountError
 from pdf2image import convert_from_path, convert_from_bytes
 from text_recog import ocr
 from text_recog import utils
+from logging.config import dictConfig
+import logging
+
+dictConfig({
+    'version': 1,
+    'formatters': {'default': {
+        'format': '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
+    }},
+    'handlers': {'wsgi': {
+        'class': 'logging.StreamHandler',
+        'stream': 'ext://flask.logging.wsgi_errors_stream',
+        'formatter': 'default'
+    }},
+    'root': {
+        'level': 'INFO',
+        'handlers': ['wsgi']
+    }
+})
+file_handler = logging.handlers.RotatingFileHandler('./service.log', maxBytes=10485760, backupCount=300, encoding='utf-8')
+file_handler.setLevel(logging.INFO)
+logging.root.addHandler(file_handler)
+
+
 
 app = Flask(__name__)
 
@@ -174,13 +197,16 @@ def calc_price():
 
     params = ('size', 'mass', 'material')
     if not all([item in request.args for item in params]):
+        app.logger.info('ERR response /calc_detail with not enough detail parameters in request')
         return jsonify({'error': 'not enough detail parameters in request', 'price': None})
 
     try:
         x = preprocess_data_new(request)
     except ValueError:
+        app.logger.info('ERR response /calc_detail with invalid detail data format')
         return jsonify({'error': 'invalid detail data format', 'price': None})
     except KeyError:
+        app.logger.info('ERR response /calc_detail with data invalid detail data. Unknown material')
         return jsonify({'error': 'invalid detail data. Unknown material', 'price': None})
 
     info = {}
@@ -205,11 +231,15 @@ def calc_price():
 
     operations = operations_vector_to_names(model_operations(torch.tensor(preprocess_data_old(request)[:-1])))
 
-    return jsonify({'price': price, "techprocesses": operations, 'info': info})
+    info['given_docs'] = {'names': list(request.files.keys()), 'count': len(request.files)}
+    resp = {'price': price, "techprocesses": operations, 'info': info}
+    app.logger.info('OK response /calc_detail with data ' + str(resp))
+    return jsonify(resp)
 
 
 @app.route("/turnoff/", methods=['POST'])
 def turnoff():
+    app.logger.info('system turned off by /turnoff query')
     os.system('kill $PPID')
 
 
@@ -224,10 +254,12 @@ def handle():
         file = request.files[first_key].stream.read() # flask FileStorage object
         img = convert_from_bytes(file)[0]
     except PDFPageCountError:
+        app.logger.info('failed to pass /sendfile query with files ' + str(list(request.files.keys())))
         return jsonify({'error': 'Given file is not a pdf file. Internal converting error', 'price': None})
 
     img.save('./recieved_files/paper.pdf')
-    return jsonify({'ok': 'File saved', 'price': None})
+    app.logger.info('ok pass /sendfile query with files ' + str(list(request.files.keys())))
+    return jsonify({'ok': 'File saved', 'price': None, 'files': list(request.files)})
 
 
 
