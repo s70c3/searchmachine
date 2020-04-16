@@ -1,6 +1,6 @@
 /*
 !service/
-!Dockerfile
+Dockerfile
 nohup.out
 *.log
 .ipynb_checkpoints
