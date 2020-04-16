@@ -1,0 +1,9 @@
+flask
+numpy
+catboost
+torch
+pdf2image
+Pillow
+pyocr
+opencv-python
+pandas
