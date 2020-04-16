@@ -1,3 +1,7 @@
 /*
 !service/
 !Dockerfile
+nohup.out
+*.log
+.ipynb_checkpoints
+service/recieved_files
