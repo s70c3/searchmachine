@@ -24,6 +24,13 @@ def load_image_from_pil(pil_img):
     img = preprocess_img(pil_img)    
     return img
 
+def pil2cv(pil_img):
+    return cv2.cvtColor(np.asarray(pil_img), cv2.COLOR_RGB2GRAY)
+
+
+def cv2pil(cv_img):
+    return Image.fromarray(cv_img)
+
 
 def show(cv_img):
     i = Image.fromarray(cv_img)

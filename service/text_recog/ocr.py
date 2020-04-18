@@ -1,10 +1,11 @@
 from PIL import Image
+import numpy as np
 
 import cv2
 import pyocr
 import pyocr.builders
 
-import numpy as np
+from .detection import crop_conturs, pil2cv
 
 tool = pyocr.get_available_tools()[0]
 langs = tool.get_available_languages()
@@ -129,7 +130,9 @@ def extract_sizes(pil_img):
             return maxsize
         
         
-    recognized = filt(process(pil_img))
+    recognized = []
+    for pic in crop_conturs(pil2cv(pil_img)):
+        recognized += filt(process(pic))
 
     recog_linears = list(map(get_linear_size, recognized))
     recog_linears = list(filter(lambda v: v is not None, recog_linears))
