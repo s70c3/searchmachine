@@ -2,17 +2,21 @@ import pickle
 from random import randint
 import os
 from math import log1p, log, sqrt, exp
-from flask import Flask, request, jsonify
 import numpy as np
+from logging.config import dictConfig
+import logging
+
+from flask import Flask, request, jsonify
+from pdf2image.exceptions import PDFPageCountError
+from pdf2image import convert_from_path, convert_from_bytes
 from catboost import CatBoostRegressor, CatBoostClassifier
 import torch
 import torch.nn as nn
-from pdf2image.exceptions import PDFPageCountError
-from pdf2image import convert_from_path, convert_from_bytes
+
 from text_recog import ocr
 from text_recog import utils
-from logging.config import dictConfig
-import logging
+from predict_operations.predict import pilpaper2operations
+
 
 dictConfig({
     'version': 1,
@@ -38,36 +42,7 @@ logging.root.addHandler(file_handler)
 app = Flask(__name__)
 
 
-def preprocess_data_old(request):
-    sep = '-'
-    size = request.args.get('size').lower()
-    mass = float(request.args.get('mass').replace(',', '.'))
-    material = request.args.get('material')
-
-    mul = lambda arr: arr[0] * mul(arr[1:]) if len(arr) > 1 else arr[0]
-    calc_dims = lambda s: sorted(list([float(x) for x in s.split(sep)]))
-    get_material = lambda s: s.split()[0].lower()
-    materials = {'лист': 1,
-                 'рулон': 2,
-                 'жесть': 3,
-                 'лента': 4,
-                 'прокат': 5}
-
-    size1, size2, size3 = calc_dims(size)
-    log_volume = log1p(mul(calc_dims(size)))
-    log_mass = log(mass)
-    sqrt_mass = sqrt(mass)
-    density = mass / mul(calc_dims(size))  # mass / volume
-
-    if get_material(material) not in materials.keys():
-        material = 1
-    else:
-        material_category = materials[get_material(material)]
-
-    return [size2, size3, log_volume, log_mass, sqrt_mass, density, material_category]
-
-
-def preprocess_data_new(request):
+def preprocess_data(request):
     sep = '-'
     size = request.args.get('size').lower()
     mass = float(request.args.get('mass').replace(',', '.'))
@@ -201,7 +176,7 @@ def calc_price():
         return jsonify({'error': 'not enough detail parameters in request', 'price': None})
 
     try:
-        x = preprocess_data_new(request)
+        x = preprocess_data(request)
     except ValueError:
         app.logger.info('ERR response /calc_detail with invalid detail data format')
         return jsonify({'error': 'invalid detail data format', 'price': None})
@@ -219,18 +194,20 @@ def calc_price():
             linsizes = ocr.extract_sizes(img)
             price = predict_tabular_paper(x, linsizes) #round(exp(model_tabular_paper.predict(x)), 2)
             info = {'predicted_by': [{'tabular': True}, {'scheme': True}]}
+            operations = pilpaper2operations(img)
         except PDFPageCountError:
             cant_open_pdf = True
 
     # no paper attached or fallback to tabular prediction
     if len(request.files) == 0 or cant_open_pdf:
         price = predict_tabular(x) #round(exp(model_tabular.predict(x)), 2)
-        info = {'predicted_by': [{'tabular': True}, {'scheme': False}]}
+        info = {'predicted_by': [{'tabular': True}, {'scheme': False}],
+                'error': 'Cant predict operations without paper'}
+        operations = []
         if cant_open_pdf:
             info['predicted_by'].append({'error': 'Tried read data from pdf. Convertion error occured'})
 
-    operations = operations_vector_to_names(model_operations(torch.tensor(preprocess_data_old(request)[:-1])))
-
+    
     info['given_docs'] = {'names': list(request.files.keys()), 'count': len(request.files)}
     resp = {'price': price, "techprocesses": operations, 'info': info}
     app.logger.info('OK response /calc_detail with data ' + str(resp))
