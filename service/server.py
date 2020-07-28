@@ -1,149 +1,18 @@
-import pickle
-from random import randint
 import os
 from math import log1p, log, sqrt, exp
-import numpy as np
-from logging.config import dictConfig
-import logging
 
 from flask import Flask, request, jsonify
 from pdf2image.exceptions import PDFPageCountError
-from pdf2image import convert_from_path, convert_from_bytes
-from catboost import CatBoostRegressor, CatBoostClassifier
-import torch
-import torch.nn as nn
+from pdf2image import convert_from_bytes
 
 from text_recog import ocr
 from text_recog import utils
 from predict_operations.predict import pilpaper2operations
-
-
-dictConfig({
-    'version': 1,
-    'formatters': {'default': {
-        'format': '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
-    }},
-    'handlers': {'wsgi': {
-        'class': 'logging.StreamHandler',
-        'stream': 'ext://flask.logging.wsgi_errors_stream',
-        'formatter': 'default'
-    }},
-    'root': {
-        'level': 'INFO',
-        'handlers': ['wsgi']
-    }
-})
-file_handler = logging.handlers.RotatingFileHandler('./service.log', maxBytes=10485760, backupCount=300, encoding='utf-8')
-file_handler.setLevel(logging.INFO)
-logging.root.addHandler(file_handler)
-
-
-
+from service.logger import LoggerYellot
+from service.data import RequestData
+from service.models import CbRegressor, CbClassifier
 app = Flask(__name__)
 
-
-def preprocess_data(request):
-    sep = '-'
-    size = request.args.get('size').lower()
-    mass = float(request.args.get('mass').replace(',', '.'))
-    material = request.args.get('material')
-
-    mul = lambda arr: arr[0] * mul(arr[1:]) if len(arr) > 1 else arr[0]
-    calc_dims = lambda s: sorted(list([float(x) for x in s.split(sep)]))
-    get_material = lambda s: s.split()[0].lower()
-    material_freqs = {'жесть': 11,
-                         'круг': 131,
-                         'лента': 75,
-                         'лист': 10052,
-                         'петля': 38,
-                         'проволока': 21,
-                         'прокат': 2,
-                         'профиль': 3,
-                         'рулон': 20906,
-                         'сетка': 4}
-    def get_material(s):
-        mat = s.split()[0].lower()
-        if mat not in material_freqs.keys() or material_freqs[mat] < 70:
-            mat = 'too_rare'
-        return mat
-
-    size1, size2, size3 = calc_dims(size)
-    volume = mul(calc_dims(size))
-    log_volume = log1p(volume)
-    log_mass = log1p(mass)
-    sqrt_mass = sqrt(mass)
-    log_density = log(1000*mass / mul(calc_dims(size)))  #log mass / volume
-    material_category = get_material(material)
-
-    return [size1, size2, size3, volume, mass, log_mass, sqrt_mass, log_volume, log_density, material_category]
-
-
-def operations_vector_to_names(operations_vector):
-    # load categories names
-    operations_names = np.array(pickle.load(open('./categories_names.pkl', 'rb')))
-    sigmoid = lambda x: 1/(1 + np.exp(-x))
-
-    # calc 1 class elements
-    operations_vector = sigmoid(operations_vector.detach().cpu().numpy())
-    #print('opers probs:', list(map(lambda x: round(x, 3), operations_vector)))
-    threshold = 0.73
-    operations_vector = (operations_vector > threshold).astype(np.int)
-
-    # map to names
-    ixs = np.where(operations_vector == 1)[0]
-    names = operations_names[ixs][:3]
-    # beutify
-    names = list(map(lambda n: {'title': n}, names))
-
-    return names
-
-
-def load_cb_model(model_path, classifier=False, categorical_ixs=[]):
-    model = CatBoostRegressor()
-    if classifier:
-        model = CatBoostClassifier()
-    if categorical_ixs != []:
-        model = CatBoostRegressor(cat_features=categorical_ixs)
-    model = model.load_model(model_path)
-    return model
-
-
-def load_model_operations(model_path):
-    class DetailsOpsModel(nn.Module):
-        def __init__(self, dim_in, dim_hidden, hidden_layers, dim_out):
-            super(DetailsOpsModel, self).__init__()
-
-            def block(dim_in, dim_out):
-                return nn.Sequential(nn.Linear(dim_in, dim_out),
-                                     nn.LeakyReLU(0.5),
-                                     nn.Dropout(0.2))
-
-            self.fc = nn.Sequential(block(dim_in, dim_hidden),
-                                    *[block(dim_hidden, dim_hidden) for _ in range(hidden_layers)],
-                                    block(dim_hidden, dim_out),
-                                    nn.Linear(dim_out, dim_out),
-                                    nn.Sigmoid())
-
-        def forward(self, x):
-            x = self.fc(x)
-            return x
-
-    # in hid_size hid_layers out
-    model = DetailsOpsModel(6, 30, 2, 58)
-    #model.load_state_dict(torch.load(model_path))
-
-    return model
-
-
-def try_get_attached_pdf_img():
-    try:
-        # assume that there is only one file attached
-        first_key = list(request.files.keys())[0]
-        file = request.files[first_key].stream.read() # flask FileStorage object
-        img = convert_from_bytes(file)[0]
-        return img
-    except PDFPageCountError:
-        raise  PDFPageCountError  #)))))))))))))))))))
 
 
 def predict_tabular(tabular_features):
@@ -153,6 +22,7 @@ def predict_tabular(tabular_features):
     logprice = model_tabular.predict(features)
     price = round(exp(logprice), 2)
     return price
+
 
 def predict_tabular_paper(tabular_features, linsizes):
     price_class = model_price_classifier.predict(tabular_features)
@@ -165,24 +35,31 @@ def predict_tabular_paper(tabular_features, linsizes):
     return price
 
 
+# errcodes
+# 1 - not enoght arguments in request
+# 2 - invalid detail data format
+# 3 - invalid detail data: Unknown material
+# 4 - legacy - /sendfile invalid files
+
 @app.route("/calc_detail/", methods=['POST'])
 def calc_price():
     # current model columns
     # size1, size2, size3, volume, mass, log_mass, sqrt_mass, log_volume, log_density, material_category, price_category
-
+    data = RequestData(request)
+    
     params = ('size', 'mass', 'material')
     if not all([item in request.args for item in params]):
-        app.logger.info('ERR response /calc_detail with not enough detail parameters in request')
-        return jsonify({'error': 'not enough detail parameters in request', 'price': None})
+        logger.error(1, 'calc_detail', 'not enought arguments in request', data.get_request_data())
+        return jsonify({'code': 1, 'error': 'not enough detail parameters in request', 'price': None})
 
     try:
-        x = preprocess_data(request)
+        x = data.preprocess()
     except ValueError:
-        app.logger.info('ERR response /calc_detail with invalid detail data format')
-        return jsonify({'error': 'invalid detail data format', 'price': None})
+        logger.error(2, 'calc_detail', 'invalid detail data format', data.get_request_data())
+        return jsonify({'code': 2, 'error': 'invalid detail data format', 'price': None})
     except KeyError:
-        app.logger.info('ERR response /calc_detail with data invalid detail data. Unknown material')
-        return jsonify({'error': 'invalid detail data. Unknown material', 'price': None})
+        logger.error(3, 'calc_detail' 'invalid detail data: Unknown material')
+        return jsonify({'code': 3, 'error': 'invalid detail data. Unknown material', 'price': None})
 
     info = {}
     cant_open_pdf = False
@@ -190,7 +67,7 @@ def calc_price():
         #  paper attached
         # try extract sizes from image
         try:
-            img = try_get_attached_pdf_img()
+            img = data.get_attached_pdf_img()
             linsizes = ocr.extract_sizes(img)
             price = predict_tabular_paper(x, linsizes) #round(exp(model_tabular_paper.predict(x)), 2)
             info = {'predicted_by': [{'tabular': True}, {'scheme': True}]}
@@ -210,13 +87,13 @@ def calc_price():
     
     info['given_docs'] = {'names': list(request.files.keys()), 'count': len(request.files)}
     resp = {'price': price, "techprocesses": operations, 'info': info}
-    app.logger.info('OK response /calc_detail with data ' + str(resp))
+    logger.info('calc_detail', 'ok', data.get_request_data(additional={'price': price, 'info': info}))
     return jsonify(resp)
 
 
 @app.route("/turnoff/", methods=['POST'])
 def turnoff():
-    app.logger.info('system turned off by /turnoff query')
+    logger.info('turnoff', 'ok')
     os.system('kill $PPID')
 
 
@@ -231,20 +108,19 @@ def handle():
         file = request.files[first_key].stream.read() # flask FileStorage object
         img = convert_from_bytes(file)[0]
     except PDFPageCountError:
-        app.logger.info('failed to pass /sendfile query with files ' + str(list(request.files.keys())))
-        return jsonify({'error': 'Given file is not a pdf file. Internal converting error', 'price': None})
+        logger.error('sendfile', 'failed with files ' + str(list(request.files.keys())))
+        return jsonify({'code': 4, 'error': 'Given file is not a pdf file. Internal converting error', 'price': None})
 
     img.save('./recieved_files/paper.pdf')
-    app.logger.info('ok pass /sendfile query with files ' + str(list(request.files.keys())))
+    logger.info('sendfile', 'ok', str(list(request.files.keys())))
     return jsonify({'ok': 'File saved', 'price': None, 'files': list(request.files)})
 
 
 
 if __name__ == "__main__":
-    model_price_classifier = load_cb_model('./text_recog/cbm_price_class.cbm', classifier=True)
-    model_tabular = load_cb_model('./text_recog/cbm_tabular_regr.cbm')
-    model_tabular_paper = load_cb_model('./text_recog/cbm_maxdata_regr.cbm')
-
-    model_operations = load_model_operations('./weights_detail2operation.pt')
-
+    logger = LoggerYellot('./service.log')
+    model_tabular = CbRegressor('./weights/cbm_tabular_regr.cbm')
+    model_tabular_paper = CbRegressor('./weights/cbm_maxdata_regr.cbm')
+    model_price_classifier = CbClassifier('./weights/cbm_price_class.cbm')
+    
     app.run(debug=False, host='127.0.0.1', port=5022)
