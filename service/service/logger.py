@@ -2,12 +2,15 @@ from datetime import datetime as dt
 
 
 class LoggerBase:
-    def __init__(self, filepath):
+    def __init__(self, filepath, duplicate_to_stdout):
         self.filepath = filepath
+        self.duplicate_to_stdout = duplicate_to_stdout
     
     def _write_msg(self, msg):
         with open(self.filepath, 'a') as log:
             log.write(msg+'\n')
+            if self.duplicate_to_stdout:
+                print(msg)
     
     def info(self, msg):
         msg = '[%s][%4s]%s' % (self._time(), 'INFO', msg)
@@ -23,8 +26,8 @@ class LoggerBase:
     
     
 class LoggerYellot(LoggerBase):
-    def __init__(self, filepath):
-        super(LoggerYellot, self).__init__(filepath)
+    def __init__(self, filepath, duplicate_to_stdout=True):
+        super(LoggerYellot, self).__init__(filepath, duplicate_to_stdout)
 
     def info(self, method, msg, params=None):
         msg = '[%s] %s %s' % (method, msg, params or '')
