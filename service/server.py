@@ -26,7 +26,6 @@ def make_app():
 def predict_tabular(tabular_features):
     price_class = model_price_classifier.predict(tabular_features)
     features = tabular_features + [price_class[0]]
-    print('f', features)
     logprice = model_tabular.predict(features)
     price = round(exp(logprice), 2)
     return price
@@ -57,8 +56,9 @@ class CalcDetailHandler(RequestHandler):
 
         if not data.is_valid_query():
             logger.error(1, 'calc_detail', 'not enought arguments in request', data.get_request_data())
-            return jsonify({'code': 1, 'error': 'not enough detail parameters in request', 'price': None})
-
+            self.write({'code': 1, 'error': 'not enough detail parameters in request', 'price': None})
+            return
+            
         try:
             x = data.preprocess()
         except ValueError:
@@ -72,7 +72,7 @@ class CalcDetailHandler(RequestHandler):
 
         info = {}
         cant_open_pdf = False
-        if len(data.files) != 0:
+        if data.has_attached_pdf:
             #  paper attached
             # try extract sizes from image
             try:
@@ -85,7 +85,7 @@ class CalcDetailHandler(RequestHandler):
                 cant_open_pdf = True
 
         # no paper attached or fallback to tabular prediction
-        if len(data.files) == 0 or cant_open_pdf:
+        if not data.has_attached_pdf or cant_open_pdf:
             price = predict_tabular(x) #round(exp(model_tabular.predict(x)), 2)
             info = {'predicted_by': [{'tabular': True}, {'scheme': False}],
                     'error': 'Cant predict operations without paper'}
@@ -94,7 +94,6 @@ class CalcDetailHandler(RequestHandler):
                 info['predicted_by'].append({'error': 'Tried read data from pdf. Convertion error occured'})
 
 
-        info['given_docs'] = {'names': list(data.files), 'count': len(data.files)}
         resp = {'price': price, "techprocesses": operations, 'info': info}
         logger.info('calc_detail', 'ok', data.get_request_data(additional={'price': price, 'info': info}))
         return self.write(resp)

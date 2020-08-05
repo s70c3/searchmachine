@@ -1,5 +1,5 @@
 from math import log1p, log, sqrt, exp
-
+import requests as r
 from pdf2image.exceptions import PDFPageCountError
 from pdf2image import convert_from_bytes
 
@@ -11,8 +11,8 @@ class RequestData:
         self.size = self.request.get_argument('size', None).lower()
         self.mass = float(self.request.get_argument('mass', None).replace(',', '.'))
         self.material = self.request.get_argument('material', None)
-        self.files = list(self.request.request.files)
-    
+        self.pdf_link = self.request.get_argument('pdf_link', None)
+        self.has_attached_pdf = self.pdf_link or None
     
     def is_valid_query(self):
         return self.size != None and self.mass != None and self.material != None
@@ -50,24 +50,34 @@ class RequestData:
     
     
     
+#     def get_attached_pdf_img(self):
+#         try:
+#             # assume that there is only one file attached
+#             first_key = list(self.request.request.files)[0]
+#             file = self.request.request.files[first_key][0]['body']
+#             img = convert_from_bytes(file)[0]
+#             return img
+#         except PDFPageCountError:
+#             raise  PDFPageCountError  #)))))))))))))))))))
+
     def get_attached_pdf_img(self):
+        pdf_link = self.request.get_argument('pdf_link', None)
         try:
-            # assume that there is only one file attached
-            first_key = list(self.request.request.files)[0]
-            file = self.request.request.files[first_key][0]['body']
-            pickle.dump(file, open('shti.pkl', 'wb'))
-            img = convert_from_bytes(file)[0]
-            return img
-        except PDFPageCountError:
-            raise  PDFPageCountError  #)))))))))))))))))))
-            
+            file = r.get(pdf_link, allow_redirects=True)
+            file = file.content
+        except Exception as e:  # todo: specify exception
+            raise e
+
+        img = convert_from_bytes(file)[0]
+        return img
+        
             
     def get_request_data(self, additional=None):
         extract = lambda d: {k:v for k,v in d.items()}
         response = {'args': [self.size,
                              self.mass,
-                             self.material],
-                    'files': list(self.request.request.files)}
+                             self.material,
+                             self.pdf_link]}
         if additional:
             for key, val in additional.items():
                 response[key] = val
