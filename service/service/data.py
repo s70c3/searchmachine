@@ -12,7 +12,7 @@ class RequestData:
         self.mass = float(self.request.get_argument('mass', None).replace(',', '.'))
         self.material = self.request.get_argument('material', None)
         self.pdf_link = self.request.get_argument('pdf_link', None)
-        self.has_attached_pdf = self.pdf_link or None
+        self.has_attached_pdf = self.pdf_link or len(self.request.request.files) or None
     
     def is_valid_query(self):
         return self.size != None and self.mass != None and self.material != None
@@ -50,25 +50,42 @@ class RequestData:
     
     
     
-#     def get_attached_pdf_img(self):
-#         try:
-#             # assume that there is only one file attached
-#             first_key = list(self.request.request.files)[0]
-#             file = self.request.request.files[first_key][0]['body']
-#             img = convert_from_bytes(file)[0]
-#             return img
-#         except PDFPageCountError:
-#             raise  PDFPageCountError  #)))))))))))))))))))
-
-    def get_attached_pdf_img(self):
+    def get_pdf_by_link(self):
         pdf_link = self.request.get_argument('pdf_link', None)
+        if pdf_link == None:
+            return pdf_link
+        
         try:
             file = r.get(pdf_link, allow_redirects=True)
             file = file.content
+            return file
         except Exception as e:  # todo: specify exception
             raise e
+    
+    
+    def get_pdf_by_file(self):
+        files = self.request.request.files
+        if len(list(files)) == 0:
+            return None
 
-        img = convert_from_bytes(file)[0]
+        first_key = list(files)[0]
+        file = files[first_key][0]['body']
+        return file
+
+    
+    def get_attached_pdf_img(self):
+        pdf = self.get_pdf_by_link()
+        if not pdf:
+            pdf = self.get_pdf_by_file()
+        if not pdf:
+            self.has_attached_pdf = False
+            return
+            
+        try:
+            img = convert_from_bytes(pdf)[0]
+        except PDFPageCountError as e:  # todo: specify exception
+            raise e
+
         return img
         
             
@@ -77,7 +94,8 @@ class RequestData:
         response = {'args': [self.size,
                              self.mass,
                              self.material,
-                             self.pdf_link]}
+                             self.pdf_link],
+                   'files': list(self.request.request.files)}
         if additional:
             for key, val in additional.items():
                 response[key] = val
