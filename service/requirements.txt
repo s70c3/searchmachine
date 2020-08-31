@@ -7,3 +7,4 @@ Pillow
 pyocr
 opencv-python
 pandas
+dataclasses
