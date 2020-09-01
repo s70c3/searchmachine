@@ -1,5 +1,6 @@
 import os
 from math import log1p, log, sqrt, exp
+import numpy as np
 
 from tornado.web import Application, RequestHandler
 from tornado.ioloop import IOLoop
@@ -13,6 +14,7 @@ from service.logger import LoggerYellot
 from service.data import RequestData
 from service.models import CbRegressor, CbClassifier
 
+from nomeclature_recognition.api import extract_nomenclature
 
 
 def make_app():
@@ -81,6 +83,10 @@ class CalcDetailHandler(RequestHandler):
                 price = predict_tabular_paper(x, linsizes) #round(exp(model_tabular_paper.predict(x)), 2)
                 info = {'predicted_by': [{'tabular': True}, {'scheme': True}]}
                 operations = pilpaper2operations(img)
+                
+                nomenclature_data = extract_nomenclature(np.array(img.convert('L')))
+                info['nomenclature_data'] = nomenclature_data
+                
             except PDFPageCountError:
                 cant_open_pdf = True
 
