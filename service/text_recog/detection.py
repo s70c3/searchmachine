@@ -74,9 +74,32 @@ class RectsBank:
         area = wi * hi
         minArea = min(wa*ha, wb*hb)
         return area/minArea
-    
-    
-    
+
+
+def get_white_area(thresh_img):
+
+    #finding conturs
+    contours, hierarchy = cv2.findContours(thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    # find inner white area
+    get_area = lambda c: -c[2] * c[3]
+    contour_sizes = [(get_area(cv2.boundingRect(contour)), contour) for contour in contours]
+    sorted_contours = sorted(contour_sizes, key=lambda x: x[0])
+
+    mask = np.zeros(thresh_img.shape, dtype=np.uint8)
+    img_area = thresh_img.shape[0] * thresh_img.shape[1]
+    prev_contour = sorted_contours[0][1]
+    for c in sorted_contours:
+        if -c[0] / img_area < 0.5:
+            crop_contour = prev_contour
+            cv2.drawContours(mask, [crop_contour], -1, (255, 255, 255), cv2.FILLED)
+            thresh_img = cv2.bitwise_and(thresh_img, thresh_img, mask=mask)
+            thresh_img[mask == 0] = 255
+            return thresh_img
+        elif -cv2.contourArea(c[1]) / c[0] < 0.5:
+            continue
+        else:
+            prev_contour = c[1]
+
 def find_conturs(cv_img):
     # return list of conturs bboxes in format [((x, y), (x1, y1)), ... ]
     EROSION = 3
