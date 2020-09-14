@@ -100,15 +100,57 @@ def get_white_area(thresh_img):
         else:
             prev_contour = c[1]
 
+
+def process_morph(img, kernel):
+    img = cv2.threshold(img, 200, 255, cv2.THRESH_BINARY)[1]
+    k = np.ones((kernel, kernel))
+    img = cv2.dilate(img, kernel=k)
+    img = cv2.erode(img, kernel=k)
+    img = cv2.morphologyEx(img, cv2.MORPH_CLOSE, k)
+    return img
+
+
+def get_thick_contour(img, kernel):
+    #getting out if found no contours while iterations
+    if kernel == 1:
+        return img
+
+    # preprocess images
+    img_re = process_morph(img, kernel)
+    #finding and make thicker closed contours
+    contours, hierarchy = cv2.findContours(img_re, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    cv2.drawContours(img_re, contours, -1, 0, 10)
+
+    #find closed contours
+    contours, hierarchy = cv2.findContours(img_re, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+
+    #get out if we found nothing
+    if len(contours) < 2:
+        return get_thick_contour(img, kernel - 1)
+
+    #get the biggest contour
+    get_area = lambda c: -c[2] * c[3]
+    contour_sizes = [(get_area(cv2.boundingRect(contour)), contour) for contour in contours]
+    b_contour = sorted(contour_sizes, key=lambda x: x[0])[1]
+
+    if -b_contour[0] / img.size < 0.15:
+        return get_thick_contour(img, kernel - 1)
+    else:
+        return b_contour[1]
+
+
 def find_conturs(cv_img):
     # return list of conturs bboxes in format [((x, y), (x1, y1)), ... ]
-    EROSION = 3
 
     # binarization
-    thresh_img = cv2.threshold(cv_img, thresh=254, maxval=255, type=cv2.THRESH_BINARY)[1]
-    # erosion
-    thresh_img = cv2.erode(thresh_img, kernel=np.ones((EROSION,EROSION), np.uint8))
-    # finding conturs
+    thresh_img = cv2.threshold(cv_img, thresh=200, maxval=255, type=cv2.THRESH_BINARY)[1]
+    #make contours thicker
+    contours, hierarchy = cv2.findContours(thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    cv2.drawContours(thresh_img, contours, -1, 0, 3)
+    #get only inner area
+    thresh_img = get_white_area(thresh_img)
+
+    # finding contours
     contours, hierarchy = cv2.findContours(thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     bboxes = [cv2.boundingRect(c) for c in contours]
