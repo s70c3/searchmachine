@@ -6,7 +6,6 @@ import numpy as np
 from pdf2image import convert_from_path
 
 
-
 def load_image_from_path(path):
     # returns cv2 image
     preprocess_img = lambda img: cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2GRAY)
@@ -35,7 +34,6 @@ def cv2pil(cv_img):
 def show(cv_img):
     i = Image.fromarray(cv_img)
     return i.resize((i.size[0]//2, i.size[1]//2))
-
 
 
 class RectsBank:
@@ -75,8 +73,7 @@ class RectsBank:
         minArea = min(wa*ha, wb*hb)
         return area/minArea
     
-    
-    
+
 def find_conturs(cv_img):
     # return list of conturs bboxes in format [((x, y), (x1, y1)), ... ]
     EROSION = 3
@@ -97,7 +94,7 @@ def find_conturs(cv_img):
     c = 0
     b=25 # border size in pixels 
     for (x,y,w,h) in top_bboxes:
-        if w*h/cv_img.size < 0.6 and w*h/cv_img.size > 0.03:
+        if 0.6 > w*h/cv_img.size > 0.03:
             # some kind of nms
             if rects_drawn.intersects((x,y,w,h)):
                 # do not need submodules

@@ -20,7 +20,6 @@ def _cut_border(img): return img[5:-5, 5:-5]
 def create_cut_border_tfm():
     return NamedTfm(name='cut border 5', short_name='cut', fn=_cut_border)
 
-
 def create_threshold_tfm(th):
     if th is None:
         return NamedTfm(name=f'threshold=No', short_name=f'threshNo', fn=lambda img: u.identity(img))
