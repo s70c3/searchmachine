@@ -102,6 +102,7 @@ class CalcDetailBySchemaHandler(RequestHandler):
 def calculate_data(data, x):
     info = {}
     cant_open_pdf = False
+    linsizes = None
     if data.has_attached_pdf:
         #  paper attached
         # try extract sizes from image
@@ -125,7 +126,7 @@ def calculate_data(data, x):
         if cant_open_pdf:
             info['predicted_by'].append({'error': 'Tried read data from pdf. Convertion error occured'})
 
-    resp = {'price': price, "techprocesses": operations, 'info': info}
+    resp = {'price': price, "techprocesses": operations, 'info': info, 'used_params': x.get_data_dict(), 'linsizes': linsizes}
     return resp
 
 
