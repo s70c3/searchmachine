@@ -113,7 +113,7 @@ def calculate_data(data, x):
             nomenclature_data = extract_nomenclature(np.array(img.convert('L')))
             info['nomenclature_data'] = nomenclature_data
 
-        except PDFPageCountError:
+        except (PDFPageCountError, TypeError):
             cant_open_pdf = True
 
     # no paper attached or fallback to tabular prediction
