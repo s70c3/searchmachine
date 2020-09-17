@@ -8,6 +8,8 @@ def fast_hist(arr, bins):
     histed = [0 for x in range(bins)]
     if len(arr) == 0:
         return histed
+    if isinstance(arr, tuple) and all([len(e)==0 for e in arr]):
+        return histed
 
     mx = max(arr)
     mn = min(arr)
