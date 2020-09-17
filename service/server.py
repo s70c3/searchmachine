@@ -11,7 +11,7 @@ from text_recog import ocr
 from text_recog import utils
 from predict_operations.predict import pilpaper2operations
 from service.logger import LoggerYellot
-from service.data import RequestData
+from service.data import RequestData, DetailData
 from service.models import CbRegressor, CbClassifier
 
 from nomeclature_recognition.api import extract_nomenclature
@@ -21,7 +21,8 @@ def make_app():
     urls = [('/helth', HelthHandler),
             ('/sendfile', SendfileHandler),
             ('/turnoff', TurnoffHandler),
-            ('/calc_detail', CalcDetailHandler)]
+            ('/calc_detail', CalcDetailByTableHandler),
+            ('/calc_detail_schema', CalcDetailBySchemaHandler)]
     return Application(urls)
 
 
@@ -45,65 +46,87 @@ def predict_tabular_paper(tabular_features, linsizes):
 
 
 # errcodes
-# 1 - not enoght arguments in request
+# 1 - not enough arguments in request or invalid argument values
 # 2 - invalid detail data format
 # 3 - invalid detail data: Unknown material
 # 4 - legacy - /sendfile invalid files
 
-class CalcDetailHandler(RequestHandler):
+class CalcDetailByTableHandler(RequestHandler):
     def post(self):
         # current model columns
         # size1, size2, size3, volume, mass, log_mass, sqrt_mass, log_volume, log_density, material_category, price_category
         data = RequestData(self)
 
-        if not data.is_valid_query():
-            logger.error(1, 'calc_detail', 'not enought arguments in request', data.get_request_data())
-            self.write({'code': 1, 'error': 'not enough detail parameters in request', 'price': None})
-            return
-            
-        try:
-            x = data.preprocess()
-        except ValueError:
-            logger.error(2, 'calc_detail', 'invalid detail data format', data.get_request_data())
-            self.write({'code': 2, 'error': 'invalid detail data format', 'price': None})
-            return
-        except KeyError:
-            logger.error(3, 'calc_detail' 'invalid detail data: Unknown material')
-            self.write({'code': 3, 'error': 'invalid detail data. Unknown material', 'price': None})
+        if not data.is_valid_table_query():
+            logger.error(1, 'calc_detail', 'not enough arguments in request or invalid argument values', data.get_request_data())
+            self.write({'code': 1, 'error': 'not enough arguments in request or invalid argument values', 'price': None})
             return
 
-        info = {}
-        cant_open_pdf = False
-        if data.has_attached_pdf:
-            #  paper attached
-            # try extract sizes from image
-            try:
-                img = data.get_attached_pdf_img()
-                linsizes = ocr.extract_sizes(img)
-                price = predict_tabular_paper(x, linsizes) #round(exp(model_tabular_paper.predict(x)), 2)
-                info = {'predicted_by': [{'tabular': True}, {'scheme': True}]}
-                operations = pilpaper2operations(img)
-                
-                nomenclature_data = extract_nomenclature(np.array(img.convert('L')))
-                info['nomenclature_data'] = nomenclature_data
-                
-            except PDFPageCountError:
-                cant_open_pdf = True
+        # get clean data
+        size_x, size_y, size_z = list(map(lambda s: float(s), data.size.split(data.sep)))
+        mass = float(data.mass)
+        material = data.material.split()[0].lower()
+        x = DetailData(size_x, size_y, size_z, mass, material)
 
-        # no paper attached or fallback to tabular prediction
-        if not data.has_attached_pdf or cant_open_pdf:
-            price = predict_tabular(x) #round(exp(model_tabular.predict(x)), 2)
-            info = {'predicted_by': [{'tabular': True}, {'scheme': False}],
-                    'error': 'Cant predict operations without paper'}
-            operations = []
-            if cant_open_pdf:
-                info['predicted_by'].append({'error': 'Tried read data from pdf. Convertion error occured'})
-
-
-        resp = {'price': price, "techprocesses": operations, 'info': info}
-        logger.info('calc_detail', 'ok', data.get_request_data(additional={'price': price, 'info': info}))
+        resp = calculate_data(data, x)
+        logger.info('calc_detail', 'ok', data.get_request_data(additional=resp))
         return self.write(resp)
 
+
+
+class CalcDetailBySchemaHandler(RequestHandler):
+    def post(self):
+        data = RequestData(self)
+
+        if not data.is_valid_scheme_query():
+            logger.error(1, 'calc_detail', 'not enough arguments in request or invalid argument values', data.get_request_data())
+            self.write({'code': 1, 'error': 'not enough arguments in request or invalid argument values', 'price': None})
+            return
+
+        size_x, size_y, size_z = list(map(lambda s: float(s), data.size.split(data.sep)))
+        # fetch mass and material
+        img = data.get_attached_pdf_img()
+        nomenclature_data = extract_nomenclature(np.array(img.convert('L')))
+        mass = nomenclature_data['mass']
+        if ',' in mass: mass = mass.replace(',', '.')
+        mass = float(mass)
+        material = nomenclature_data['material']
+        # create dataclass
+        x = DetailData(size_x, size_y, size_z, mass, material)
+
+        resp = calculate_data(data, x)
+        logger.info('calc_detail', 'ok', data.get_request_data(additional=resp))
+        return self.write(resp)
+
+
+def calculate_data(data, x):
+    info = {}
+    cant_open_pdf = False
+    if data.has_attached_pdf:
+        #  paper attached
+        # try extract sizes from image
+        try:
+            img = data.get_attached_pdf_img()
+            linsizes = ocr.extract_sizes(img)
+            price = predict_tabular_paper(x.preprocess(), linsizes)  # round(exp(model_tabular_paper.predict(x)), 2)
+            operations = pilpaper2operations(img)
+            nomenclature_data = extract_nomenclature(np.array(img.convert('L')))
+            info['nomenclature_data'] = nomenclature_data
+
+        except (PDFPageCountError, TypeError):
+            cant_open_pdf = True
+
+    # no paper attached or fallback to tabular prediction
+    if not data.has_attached_pdf or cant_open_pdf:
+        price = predict_tabular(x.preprocess())  # round(exp(model_tabular.predict(x)), 2)
+        info = {'predicted_by': [{'tabular': True}, {'scheme': False}],
+                'error': 'Cant predict operations without paper'}
+        operations = []
+        if cant_open_pdf:
+            info['predicted_by'].append({'error': 'Tried read data from pdf. Convertion error occured'})
+
+    resp = {'price': price, "techprocesses": operations, 'info': info}
+    return resp
 
 
 class HelthHandler(RequestHandler):

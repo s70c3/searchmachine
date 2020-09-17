@@ -28,8 +28,8 @@ def convert(word_box):
     return poly_np, word_box.content
 
 
-rn
-poly_np, word_box.content
+# rn
+# poly_np, word_box.content
 
 
 class MyBuilder(pyocr.builders.WordBoxBuilder):
@@ -144,7 +144,8 @@ def extract_sizes(pil_img):
             return maxsize
 
     recognized = {-90: [], 0: []}
-    for pic in crop_conturs(pil_img):
+    cv_img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2GRAY)
+    for pic in crop_conturs(cv_img):
         contours, hierarchy = cv2.findContours(pic, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         cv2.drawContours(pic, contours, -1, 0, 1)
         projection_recognized = process(pic)
