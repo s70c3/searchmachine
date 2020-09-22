@@ -118,7 +118,7 @@ def calculate_data(data, x):
         try:
             img = data.get_attached_pdf_img()
             linsizes = ocr.extract_sizes(img)
-            price = predict_tabular_paper(x.preprocess(), linsizes)  # round(exp(model_tabular_paper.predict(x)), 2)
+            price = predict_tabular_paper(x.preprocess(), linsizes[1])
             operations = pilpaper2operations(img)
             nomenclature_data = extract_nomenclature(np.array(img.convert('L')))
             info['nomenclature_data'] = nomenclature_data
@@ -128,7 +128,7 @@ def calculate_data(data, x):
 
     # no paper attached or fallback to tabular prediction
     if not data.has_attached_pdf or cant_open_pdf:
-        price = predict_tabular(x.preprocess())  # round(exp(model_tabular.predict(x)), 2)
+        price = predict_tabular(x.preprocess()) 
         info = {'predicted_by': [{'tabular': True}, {'scheme': False}],
                 'error': 'Cant predict operations without paper'}
         operations = []
