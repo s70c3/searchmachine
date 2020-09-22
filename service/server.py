@@ -73,6 +73,14 @@ class CalcDetailByTableHandler(RequestHandler):
         return self.write(resp)
 
 
+    
+def detect_material(material_string):
+    m = material_string.lower()
+    for material in 'жесть круг лента лист петля проволока прокат профиль рулон сетка'.split():
+        if material in m:
+            return material
+    return m
+    
 
 class CalcDetailBySchemaHandler(RequestHandler):
     def post(self):
@@ -91,6 +99,7 @@ class CalcDetailBySchemaHandler(RequestHandler):
         if ',' in mass: mass = mass.replace(',', '.')
         mass = float(mass)
         material = nomenclature_data['material']
+        material = detect_material(material)
         # create dataclass
         x = DetailData(size_x, size_y, size_z, mass, material)
 
