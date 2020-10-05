@@ -8,3 +8,4 @@ pyocr
 opencv-python
 pandas
 dataclasses
+ezdxf
