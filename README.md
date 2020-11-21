@@ -4,7 +4,7 @@
 
 Install system requirements
 ```bash
-sudo add-apt-repository ppa:alex-p/tesseract-ocr
+sudo add-apt-repository ppa:alex-p/tesseract-ocr-devel
 sudo apt-get update
 sudo apt-get install tesseract-ocr tesseract-ocr-rus
 sudo apt-get install libsm6 libxrender1 libfontconfig1
