@@ -1,0 +1,14 @@
+- name: test1
+  filepath: unittests/БМЗ > 2ТЭ25-000-90-389.tif
+  detail: лист
+  mass: 5.1
+  thickness: 6.0
+  ops: профильно-вырезная электрофизическая лучевая лазерная|очистка дробеметная|правка|маркирование
+  profilnaya_norm: 0.539526
+- name: test2
+  filepath: unittests/НЭВЗ > 7ТН.242.096.tif
+  detail: скоба
+  mass: 1.432
+  thickness: 3.0
+  ops: профильно-вырезная электрофизическая лучевая лазерная|правка|гибка
+  profilnaya_norm: 0.636
