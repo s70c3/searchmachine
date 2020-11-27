@@ -160,6 +160,7 @@ def draw_conturs(cv_img):
 
 def crop_conturs(cv_img):
     # returns list of detail images
+    img = cv2.threshold(cv_img, 200, 255, cv2.THRESH_BINARY)[1]
     details = []
     bboxes = find_conturs(cv_img)
     for c, bbox in enumerate(bboxes):
