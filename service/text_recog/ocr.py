@@ -147,12 +147,10 @@ def show(path):
 def recorgnize(img, psm=11):
     polys_np, rec_scores = [], []
     labels = {-90: [], 0: []}
-    labels_t = []
     for i, angle in enumerate([0, -90]):
-        labels0, labels_t0 = rotated_ocr(img, angle, psm)  # , builder=builder)
+        labels0 = rotated_ocr(img, angle, psm)  # , builder=builder)
         labels[angle].extend(labels0)
-        labels_t.extend(labels_t0)
-    return labels, labels_t
+    return labels
 
 def process(img, psm=11):
     img = process_for_getting_only_text(img)

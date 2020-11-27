@@ -79,7 +79,7 @@ class RectsBank:
 def get_white_area(thresh_img):
 
     #finding conturs
-    contours, hierarchy = cv2.findContours(thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    _, contours, hierarchy = cv2.findContours(thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     # find inner white area
     get_area = lambda c: -c[2] * c[3]
     contour_sizes = [(get_area(cv2.boundingRect(contour)), contour) for contour in contours]
@@ -116,13 +116,13 @@ def find_conturs(cv_img):
     # binarization
     thresh_img = cv2.threshold(cv_img, thresh=200, maxval=255, type=cv2.THRESH_BINARY)[1]
     #make contours thicker
-    contours, hierarchy = cv2.findContours(thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    _, contours, hierarchy = cv2.findContours(thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     cv2.drawContours(thresh_img, contours, -1, 0, 3)
     #get only inner area
     thresh_img = get_white_area(thresh_img)
 
     # finding contours
-    contours, hierarchy = cv2.findContours(thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    _, contours, hierarchy = cv2.findContours(thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     bboxes = [cv2.boundingRect(c) for c in contours]
     top_bboxes = sorted(bboxes, key=lambda b: -b[2]*b[3])
