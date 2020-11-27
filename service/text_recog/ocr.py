@@ -107,7 +107,7 @@ def ocr(img, psm=11):
     builder.tesseract_flags = ['--psm', str(psm)]
     word_boxes = tool.image_to_string(
         img,
-        lang="pmeng6",
+        lang="tunedeng",
         builder=builder
     )
 
