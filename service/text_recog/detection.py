@@ -110,35 +110,6 @@ def process_morph(img, kernel):
     return img
 
 
-def get_thick_contour(img, kernel):
-    #getting out if found no contours while iterations
-    if kernel == 1:
-        return img
-
-    # preprocess images
-    img_re = process_morph(img, kernel)
-    #finding and make thicker closed contours
-    contours, hierarchy = cv2.findContours(img_re, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-    cv2.drawContours(img_re, contours, -1, 0, 10)
-
-    #find closed contours
-    contours, hierarchy = cv2.findContours(img_re, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-
-    #get out if we found nothing
-    if len(contours) < 2:
-        return get_thick_contour(img, kernel - 1)
-
-    #get the biggest contour
-    get_area = lambda c: -c[2] * c[3]
-    contour_sizes = [(get_area(cv2.boundingRect(contour)), contour) for contour in contours]
-    b_contour = sorted(contour_sizes, key=lambda x: x[0])[1]
-
-    if -b_contour[0] / img.size < 0.15:
-        return get_thick_contour(img, kernel - 1)
-    else:
-        return b_contour[1]
-
-
 def find_conturs(cv_img):
     # return list of conturs bboxes in format [((x, y), (x1, y1)), ... ]
 
