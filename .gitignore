@@ -6,3 +6,4 @@ nohup.out
 .ipynb_checkpoints
 service/recieved_files
 __pycache__/
+*.pyc

@@ -47,7 +47,7 @@ def predict_operations(detail_name:str, mass:float, thickness:float, mass_des:fl
     except:
         return None
 
-def predict_norms(img, detail_name:str, mass:float, thickness:float, length:float, width:float):
+def predict_norms(img, detail_name:str, mass:float, thickness:float, length:float = None, width:float = None):
     '''
     Args:
         img: grayscale image array with values in range 0..255
