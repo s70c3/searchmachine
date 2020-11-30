@@ -26,6 +26,11 @@ sudo pip3 install setuptools
 sudo pip3 install -r requirements.txt
 ```
 
+Install tesseract languages data
+```
+cp sevice/text_recog/tunedeng.traineddata /usr/share/tesseract-ocr/5/tessdata/
+```
+
 ## Run
 
 Replace last string in server.py with your server ip and preferable port
