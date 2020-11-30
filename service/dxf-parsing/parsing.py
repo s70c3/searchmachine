@@ -79,7 +79,14 @@ def extract_info(dxf_name):
 
 
 def get_contour_from_dxf(dxf_name):
-    return extract_info(dxf_name)[0]
+    """
+    Main method that extracts contour from dxf as a np.ndarray
+    @param dxf_name: path to dxf file
+    @return: contour np.ndarray
+    """
+    contour = extract_info(dxf_name)[0]
+    contour = contour.squeeze()
+    return contour
 
 
 def get_size_from_dxf(dxf_name):
