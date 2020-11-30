@@ -1,90 +1,78 @@
-from catboost import CatBoostRegressor, CatBoostClassifier
-import torch
-import torch.nn as nn
+from math import exp, trunc
+import numpy as np
+
+from .catboost_models import CbClassifier, CbRegressor
 
 
+class PredictModel():
+    def __init__(self, tabular_model_path, tabular_paper_model_path, price_category_model_path):
+        self.tabular_model = CbRegressor(tabular_model_path)
+        self.tabular_paper_model = CbRegressor(tabular_paper_model_path)
+        self.price_category_model = CbClassifier(price_category_model_path)
 
-class BaseModel:
-    def __init__(self, weights_path):
-        self.weights_path = weights_path
-        self.model_initialized = False
-        
-        
-    def _init_model(self):
-        raise NotImplementedError
-        
-    
-    def predict(self, data):
-        raise NotImplementedError
-        
-        
-        
-class CbModel(BaseModel):
-    '''Base catboost model class'''
-    def __init__(self, weights_path):
-        super(CbModel, self).__init__(weights_path)
-        
-    
-    def _init_model(self, model_cls, *args):
-        model = model_cls(args)
-        model.load_model(self.weights_path)
-        self.model_initialized = True
-        return model
-    
-        
-    def predict(self, features):
-        if not self.model_initialized:
-            raise AttributeError('Model not initialized')
+    def _predict_price_category(self, features):
+        price_class = self.price_category_model.predict(features)
+        return price_class[0]
+
+    def _predict_tabular(self, features):
+        price_class = self._predict_price_category(features)
+        features = features + [price_class]
+        logprice = self.tabular_model.predict(features)
+        price = round(exp(logprice), 2) # predictions are in log space
+        return price
+
+    def _predict_tabular_paper(self, features, linsizes):
+        price_class = self._predict_price_category(features)
+        paper_features = fast_hist(linsizes, bins=10)
+        features = features + [price_class] + list(paper_features)
+
+        logprice = self.tabular_paper_model.predict(features)
+        price = round(exp(logprice), 2) # predictions are in log space
+        return price
+
+    def predict_price(self, features, linsizes=None):
+        '''
+        Predicts price on given data
+        @param features: list of features for model 
+        @param linsizes: list of linear sizes detected on pdf
+        '''
+        info = {}
+        if linsizes is None:
+            price = self._predict_tabular(features)
+            info = {'predicted_by': [{'tabular': True}, {'scheme': False}],
+                    'error': 'Cant predict operations without paper'}
+            operations = []
+            # if cant_open_pdf:
+            #     info['predicted_by'].append({'error': 'Tried read data from pdf. Convertion error occured'})
         else:
-            return self.model.predict(features)
-            
-            
-            
-class CbClassifier(CbModel):
-    def __init__(self, weights_path):
-        super(CbClassifier, self).__init__(weights_path)
-        self.model = self._init_model(CatBoostClassifier)
-        
-        
-        
-class CbRegressor(CbModel):
-    def __init__(self, weights_path, *args):
-        super(CbRegressor, self).__init__(weights_path)
-        self.model = self._init_model(CatBoostRegressor, args)
-        
-        
-        
-# class TorchClassifier(BaseModel):
-#     def __init__(self, weights_path):
-#         super(TorchClassifier, self).__init__(weights_path)
-        
-    
-#     def _init_model(self):
-#         class DetailsOpsModel(nn.Module):
-#             def __init__(self, dim_in, dim_hidden, hidden_layers, dim_out):
-#                 super(DetailsOpsModel, self).__init__()
+            price = self._predict_tabular_paper(features, linsizes)
+        return price
 
-#                 def block(dim_in, dim_out):
-#                     return nn.Sequential(nn.Linear(dim_in, dim_out),
-#                                          nn.LeakyReLU(0.5),
-#                                          nn.Dropout(0.2))
 
-#                 self.fc = nn.Sequential(block(dim_in, dim_hidden),
-#                                         *[block(dim_hidden, dim_hidden) for _ in range(hidden_layers)],
-#                                         block(dim_hidden, dim_out),
-#                                         nn.Linear(dim_out, dim_out),
-#                                         nn.Sigmoid())
+def fast_hist(arr, bins):
+    histed = [0 for x in range(bins)]
+    if len(arr) == 0:
+        return histed
+    if isinstance(arr, tuple) and all([len(e)==0 for e in arr]):
+        return histed
 
-#             def forward(self, x):
-#                 x = self.fc(x)
-#                 return x
+    mx = max(arr)
+    mn = min(arr)
+    step = (mx-mn)/bins
 
-#         # in hid_size hid_layers out
-#         model = DetailsOpsModel(6, 30, 2, 58)
-#         #model.load_state_dict(torch.load(model_path))
-# #         self.model_initialized = True
-#         return model
+    if mx == mn:
+        norm = 1 / (mx-mn + 1)
+    else:
+        norm = 1 / (mx-mn)
+    nx = bins
 
-    
-#     def predict(self, features):
-#         raise NotImplementedError
+    for elem in arr:
+        try:
+            ix = trunc((elem - mn) * norm * nx)
+            if ix == bins:
+                ix -=1
+            histed[ix] += 1
+        except:
+            pass#rint('-->','el', elem, 'min max', mn, mx)
+
+    return np.array(histed)
