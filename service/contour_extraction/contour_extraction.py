@@ -175,7 +175,7 @@ def get_contour(img, kernel=7):
     # preprocess images
     img_re = process_morph(img, kernel)
 
-    _, contours, hierarchy = cv2.findContours(img_re, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    contours, hierarchy = cv2.findContours(img_re, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     cv2.drawContours(img_re, contours[1:], -1, 0, 5)
     k = np.ones((55, 55))
     k_d = np.ones((50, 50))
@@ -185,7 +185,7 @@ def get_contour(img, kernel=7):
 
     cv2.rectangle(img_re, (0, 0), (img_re.shape[1], img_re.shape[0]), (255, 255, 255), 5)
     # find closed contours
-    _, contours, hierarchy = cv2.findContours(img_re, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    contours, hierarchy = cv2.findContours(img_re, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 
     # get out if we found nothing
     if len(contours) < 2:

@@ -42,7 +42,7 @@ def get_text_boxes(img):
     mask = cv2.threshold(mask, 200, 255, cv2.THRESH_BINARY)[1]
     #     mask = cv2.bitwise_not(mask)
 
-    _, contours, hierarchy = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    contours, hierarchy = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
     return_mask = np.ones(img.shape) * 255
 
@@ -208,9 +208,10 @@ def get_linear_size(w):
         return maxsize
 
 
-def extract_sizes(cv_img):
+def extract_sizes(pil_img):
     recognized = {-90: [], 0: []}
-    #     cv_img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2GRAY)
+    cv_img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2GRAY)
+
     for pic in crop_conturs(cv_img):
         projection_recognized = process(pic)
 
