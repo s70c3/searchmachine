@@ -1,3 +1,4 @@
+from sys import setrecursionlimit
 import os
 import numpy as np
 import json
@@ -20,6 +21,9 @@ from packing.models.poly_packing import pack_polygonal
 # from packing.models.neural_packing import pack_neural
 from packing.models.request_parsing import RectPackingParameters, DxfPackingParameters
 
+# To pack thousands of details on one list with rectangular packing (based on kd tree),
+# recursion  limit should be huge
+setrecursionlimit(10**6)
 
 def make_app():
     urls = [('/helth', HelthHandler),
