@@ -2,6 +2,7 @@
 !service/
 Dockerfile
 nohup.out
+.idea
 *.log
 .ipynb_checkpoints
 service/recieved_files
@@ -9,3 +10,6 @@ __pycache__/
 *.pyc
 *.zip
 *.xml
+*.pkl
+*.pt
+.gitkeep

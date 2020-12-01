@@ -2,6 +2,7 @@ dataclasses
 tornado
 numpy
 pandas
+sklearn
 catboost
 torch
 pyocr

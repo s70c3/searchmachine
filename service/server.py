@@ -154,10 +154,6 @@ class CalcDetailBySchemaHandler(RequestHandler):
         if ops is None:
             ops = operations
 
-        print('operations', operations)
-        print('ops', ops)
-        print('norms', norms)
-
         ops_objects = []
         iterable = ops or norms
         if iterable is not None:
@@ -200,10 +196,14 @@ class PackDetailsRectangular(RequestHandler):
     """
 
     def post(self):
-        params = json.loads(self.request.body.decode('utf-8'))
+        try:
+            params = json.loads(self.request.body.decode('utf-8'))
+        except json.JSONDecodeError:
+            self.write({'error': 'Cant decode given json data'})
         print('rect params', params)
         params = RectPackingParameters(params)
         errors_or_packing_info = pack_rectangular(params)
+        logger.info('calc_detail', 'ok', errors_or_packing_info)
         self.write(errors_or_packing_info)
 
 

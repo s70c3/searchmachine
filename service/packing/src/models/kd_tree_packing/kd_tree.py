@@ -31,6 +31,8 @@ class KDTree:
     
         
     def insert(self, r_w, r_h, data=None):
+        assert r_w is not None
+        assert r_h is not None
         
         # insert left?
         if self.child_l:
@@ -180,7 +182,6 @@ def visualize_tree(tree):
         
     def draw_dxf(xy, xy1, img_orig, dxf_img):
         # draw given dxf image inside element with given shape
-#         print('draw from', xy, 'size', xy1, 'img', img_orig, 'dxf', dxf_img)
         def need_rotate(img_wh, cell_wh):
             i = img_wh
             c = cell_wh
@@ -197,7 +198,6 @@ def visualize_tree(tree):
             dxf_img = dxf_img.resize((h, w))
         else:
             dxf_img = dxf_img.resize((w, h))
-#         print('  new size', dxf_img.size)
         img_orig = img_orig.paste(dxf_img, (x, y))
         return img_orig
 
@@ -205,7 +205,6 @@ def visualize_tree(tree):
         coord1 = resize(node.xy_l, SCALE_IMGS_K)
         coord2 = resize(node.xy_r, SCALE_IMGS_K)
         data = node.data
-        print('nd', data)
         return coord1, coord2, data
 
     def visit(node, img):
@@ -216,7 +215,6 @@ def visualize_tree(tree):
             visit(node.child_r, img)
 
         if node.has_data:
-            print('  found data', node.data)
             coord, wh, dxf = get_node_rect(node)
             if dxf is not None:
                 # fetch from cache or add to cache
@@ -228,7 +226,6 @@ def visualize_tree(tree):
                 img = draw_dxf(coord, wh, img, dxf_img)
                 draw_rect(coord, wh)
             else:
-                print('drawing rect', coord, wh)
                 draw_rect(coord, wh)
         
     visit(tree, img)
