@@ -1,0 +1,6 @@
+address: 'http://127.0.0.1:5022/'
+rect_packing:
+    method_name: 'pack_details'
+
+poly_packing:
+    method_name: 'pack_details_polygonal'

@@ -7,3 +7,5 @@ nohup.out
 service/recieved_files
 __pycache__/
 *.pyc
+*.zip
+*.xml

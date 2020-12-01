@@ -1,17 +1,24 @@
 import os
 import numpy as np
-
+import json
 from tornado.web import Application, RequestHandler, StaticFileHandler
 from tornado.ioloop import IOLoop
 
+# techprocesses and ocr imports
 from text_recog import ocr
 from predict_operations.predict import pilpaper2operations
+from predict_norms.api import predict_norms, predict_operations
+from nomeclature_recognition.api import extract_nomenclature
+# price imports
 from service.models import PredictModel
 from service.logger import LoggerYellot
 from service.feature_extractors import DetailData
 from service.request_validators import TablularDetailDataValidator, PDFValidator
-from nomeclature_recognition.api import extract_nomenclature
-from predict_norms.api import predict_norms, predict_operations
+# packing imports
+from packing.models.rect_packing_model.packing import pack_rectangular, PackError
+from packing.models.poly_packing import pack_polygonal
+# from packing.models.neural_packing import pack_neural
+from packing.models.request_parsing import RectPackingParameters, DxfPackingParameters
 
 
 def make_app():
@@ -19,14 +26,18 @@ def make_app():
             ('/turnoff', TurnoffHandler),
             ('/calc_detail', CalcDetailByTableHandler),
             ('/calc_detail_schema', CalcDetailBySchemaHandler),
-            ('/files/(.*)', SendfileHandler, {'path': os.getcwd()+'/service/files/'})]
+            ('/pack_details', PackDetailsRectangular),
+            ('/pack_details_polygonal', PackDetailsPolygonal),
+            ('/pack_details_neural', PackDetailsNeural),
+            ('/files/(.*)', SendfileHandler, {'path': os.getcwd() + '/service/files/'})]
     return Application(urls)
 
 
 class CalcDetailByTableHandler(RequestHandler):
-    '''
+    """
     Calculates price with tabular data: sizes, mass and material
-    '''
+    """
+
     def _create_responce(self, price):
         return {'price': price,
                 'linsizes': [],
@@ -44,7 +55,7 @@ class CalcDetailByTableHandler(RequestHandler):
         parse_errors = validator.get_parse_errors(self)
         if len(parse_errors):
             self.write({'parse_errors': parse_errors})
-            
+
         # get clean data
         size_x, size_y, size_z = list(map(lambda s: float(s), self.get_argument('size').split('-')))
         mass = float(self.get_argument('mass').replace(',', '.'))
@@ -94,24 +105,23 @@ class CalcDetailBySchemaHandler(RequestHandler):
         return norms, ops
 
     def _create_broken_pdf_responce(self, price):
-        def _create_responce(self, price):
-            return {'price': price,
-                    'linsizes': [],
-                    'techprocesses': [],
-                    'info': {'predicted_by': [{'tabular': True}, {'scheme': False}],
-                             'errors': [
-                                 {'description': 'Cant predict techprocesses without pdf paper'},
-                                 {'description': 'Cant predict linear sizes without pdf paper'}
-                             ]}
-                    }
+        return {'price': price,
+                'linsizes': [],
+                'techprocesses': [],
+                'info': {'predicted_by': [{'tabular': True}, {'scheme': False}],
+                         'errors': [
+                             {'description': 'Cant predict techprocesses without pdf paper'},
+                             {'description': 'Cant predict linear sizes without pdf paper'}
+                         ]}
+                }
 
     def _create_responce(self, price, linsizes, techprocesses):
-            return {'price': price,
-                    'linsizes': linsizes,
-                    'techprocesses': techprocesses,
-                    'info': {'predicted_by': [{'tabular': True}, {'scheme': True}],
-                             'errors': []}
-                    }
+        return {'price': price,
+                'linsizes': linsizes,
+                'techprocesses': techprocesses,
+                'info': {'predicted_by': [{'tabular': True}, {'scheme': True}],
+                         'errors': []}
+                }
 
     def post(self):
         # parse request data
@@ -178,15 +188,46 @@ class TurnoffHandler(RequestHandler):
         logger.info('turnoff', 'ok')
         os.system('kill $PPID')
 
+
 class SendfileHandler(StaticFileHandler):
     def parse_url_path(self, url_path):
         return url_path
 
 
+class PackDetailsRectangular(RequestHandler):
+    """
+    Packing of rectangular objects. May include dxf for packing maps visualizations
+    """
+
+    def post(self):
+        params = json.loads(self.request.body.decode('utf-8'))
+        print('rect params', params)
+        params = RectPackingParameters(params)
+        errors_or_packing_info = pack_rectangular(params)
+        self.write(errors_or_packing_info)
+
+
+class PackDetailsPolygonal(RequestHandler):
+    """
+    Packing of polygon objects. Must include dxfs as a source of polygons
+    """
+
+    def post(self):
+        params = json.loads(self.request.body.decode('utf-8'))
+        params = DxfPackingParameters(params)
+        errors_or_packing_info = pack_polygonal(params)
+        self.write(errors_or_packing_info)
+
+
+class PackDetailsNeural(RequestHandler):
+    def post(self):
+        self.write({'errors': ['not yet developed']})
+
+
 if __name__ == "__main__":
     logger = LoggerYellot('./service.log', False)
     price_model = PredictModel(tabular_model_path='./weights/cbm_tabular_regr.cbm',
-                               tabular_paper_model_path= './weights/cbm_maxdata_regr.cbm',
+                               tabular_paper_model_path='./weights/cbm_maxdata_regr.cbm',
                                price_category_model_path='./weights/cbm_price_class.cbm')
     print('Models have loaded')
 
