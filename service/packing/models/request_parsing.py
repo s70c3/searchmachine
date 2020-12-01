@@ -43,7 +43,7 @@ class PackingParametersBase:
 
     def all_details_fits_material(self):
         for idx, detail in enumerate(self.details):
-            if detail.w >= self.material_width or detail.h >= self.material_height:
+            if detail.w > self.material_width or detail.h > self.material_height:
                 msg = 'detail %d  size (%d, %d) doesnt fit to material size (%d, %d)' % (idx,
                                                                                          detail.w,
                                                                                          detail.h,
