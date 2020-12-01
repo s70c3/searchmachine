@@ -21,7 +21,7 @@ _folder = Path('./predict_norms/files/')
 
 def _read_img_model():
     model = ConvModel(1)
-    model.load_state_dict(torch.load(_folder / 'profilnaya.pth'))
+    model.load_state_dict(torch.load(_folder / 'profilnaya.pth', map_location='cpu'))
     model = model.eval()
     return model
 

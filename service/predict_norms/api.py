@@ -11,7 +11,7 @@ model_pt = './predict_norms/predict_norms.pth'
 with open ('./predict_norms/norms_operations.pkl', 'rb') as f:
     operations = pickle.load(f)
 model_predict_norms = ConvModel(len(operations))
-model_predict_norms.load_state_dict(torch.load(model_pt))
+model_predict_norms.load_state_dict(torch.load(model_pt, map_location='cpu'))
 model_predict_norms = model_predict_norms.eval()
 with open('./predict_norms/details.pkl', 'rb') as f:
     all_details = pickle.load(f)

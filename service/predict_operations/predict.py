@@ -78,7 +78,7 @@ confident_ops = all_ops[ixs]
 
 
 model = ConvModel(len(all_ops)).eval()
-model.load_state_dict(torch.load('./predict_operations/conv_model.pt'))
+model.load_state_dict(torch.load('./predict_operations/conv_model.pt', map_location='cpu'))
 transform = transforms.Compose([transforms.Grayscale(),
                              transforms.Resize((PIC_SIZE, PIC_SIZE)),
                              transforms.ToTensor()])
