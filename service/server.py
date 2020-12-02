@@ -87,12 +87,15 @@ class CalcDetailBySchemaHandler(RequestHandler):
             return m
 
         nomenclature_data = extract_nomenclature(np.array(pdf_img.convert('L')))
+        print('mass detected', nomenclature_data)
         mass = nomenclature_data['mass']
         if ',' in mass:
             mass = mass.replace(',', '.')
-        mass = float(mass)
         material = nomenclature_data['material']
-        material = detect_material(material)
+        try:
+            material = detect_material(material)
+        except AttributeError: # if material is None
+            pass
         return mass, material
 
     def _predict_operations(self, pdf_img):
@@ -119,9 +122,11 @@ class CalcDetailBySchemaHandler(RequestHandler):
                          ]}
                 }
 
-    def _create_responce(self, price, linsizes, techprocesses):
+    def _create_responce(self, price, mass, material, linsizes, techprocesses):
         return {'price': price,
                 'linsizes': linsizes,
+                'mass': mass,
+                'material': material,
                 'techprocesses': techprocesses,
                 'info': {'predicted_by': [{'tabular': True}, {'scheme': True}],
                          'errors': []}
@@ -148,6 +153,20 @@ class CalcDetailBySchemaHandler(RequestHandler):
         # predict detail parameters by pdf paper
         img = validator.get_image()
         mass, material = self._predict_nomenclature(img)
+        try:
+            parsed_mass = list(filter(lambda c: c.isdigit() or c == '.', mass))
+            parsed_mass = ''.join(parsed_mass)
+            mass = float(parsed_mass)
+        except ValueError:
+            self.write({'prediction_error': 'Cant read mass from pdf file. Cant make price predition without mass',
+                        'mass': mass})
+            return
+        
+        if material is None:
+            self.write({'prediction_error': 'Cant read material from pdf file. Cant make price predition without material',
+                        'material': material})
+            return
+        
         features = DetailData(size_x, size_y, size_z, mass, material).preprocess()
 
         linsizes = self._predict_linsizes(img)
@@ -173,7 +192,7 @@ class CalcDetailBySchemaHandler(RequestHandler):
                 obj = {'name': op, 'norm': norm}
                 ops_objects.append(obj)
 
-        info = self._create_responce(price, linsizes, ops_objects)
+        info = self._create_responce(price, mass, material, linsizes, ops_objects)
         logger.info('calc_detail', 'ok', {'size': [size_x, size_y, size_z], 'mass': mass, 'material': material})
         return self.write(info)
 
