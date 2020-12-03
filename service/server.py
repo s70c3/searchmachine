@@ -1,4 +1,5 @@
 from sys import setrecursionlimit
+import re
 import os
 import numpy as np
 import json
@@ -7,8 +8,7 @@ from tornado.ioloop import IOLoop
 
 # techprocesses and ocr imports
 from text_recog import ocr
-from predict_operations.predict import pilpaper2operations
-from predict_norms.api import predict_norms, predict_operations
+from predict_norms.api import predict_operations_and_norms
 from nomeclature_recognition.api import extract_nomenclature
 # price imports
 from service.models import PredictModel
@@ -16,7 +16,7 @@ from service.logger import LoggerYellot
 from service.feature_extractors import DetailData
 from service.request_validators import TablularDetailDataValidator, PDFValidator
 # packing imports
-from packing.models.rect_packing_model.packing import pack_rectangular, PackError
+from packing.models.rect_packing_model.packing import pack_rectangular
 from packing.models.poly_packing import pack_polygonal
 # from packing.models.neural_packing import pack_neural
 from packing.models.request_parsing import RectPackingParameters, DxfPackingParameters
@@ -98,18 +98,9 @@ class CalcDetailBySchemaHandler(RequestHandler):
             pass
         return mass, material
 
-    def _predict_operations(self, pdf_img):
-        operations = pilpaper2operations(pdf_img)
-        return operations
-
-    def _predict_norms(self, pdf_img, material, mass, thickness=6):
-        # TODO fetch thickness
-        norms = predict_norms(pdf_img, material, mass, thickness)
-        ops = predict_operations(material, mass, thickness)
-        if ops and norms and len(norms) != len(ops):
-            print('[WARN] norms and ops from new api has different length')
-            ops = None
-        return norms, ops
+    def _predict_ops_and_norms(self, pdf_img, material, mass, thickness):
+        ops_norms = predict_operations_and_norms(pdf_img, material, mass, thickness)
+        return ops_norms
 
     def _create_broken_pdf_responce(self, price):
         return {'price': price,
@@ -121,6 +112,75 @@ class CalcDetailBySchemaHandler(RequestHandler):
                              {'description': 'Cant predict linear sizes without pdf paper'}
                          ]}
                 }
+
+    def _fetch_material_thickness(self, material_string):
+        # Fetches thickness of material from the given string with material data
+        # If cant fetch anything, returns None
+        def preprocess(material):
+            # Delete all external symbols
+            allowed_symbs = '-xх,. '
+            is_allowed = lambda c: c.isdigit() or c in allowed_symbs
+            material = material.lower()
+
+            filtred_material = ''
+            prev_added_c = None
+            for i, c in enumerate(material[1:], start=1):
+                if is_allowed(c):
+                    if prev_added_c is None or c.isdigit():
+                        filtred_material += c
+                    elif c in allowed_symbs and c != prev_added_c:
+                        filtred_material += c
+                    else:
+                        continue
+                    prev_added_c = c
+            return filtred_material
+
+        def get_best_candidate(candidate_sizes_string):
+            # Select substring that looks the most closely to sizes
+            candidates = candidate_sizes_string.split()
+            for s in candidates:
+                if ',' in s:
+                    return s
+            for s in candidates:
+                if re.search(r"\d{1,2}(x|х)\d{1,5}(x|х)\d{1,5}", s):
+                    return s
+            for s in candidates:
+                if re.search(r"\d{1,2}(x|х)\d{1,5}", s):
+                    return s
+            return None
+
+        def fetch_thickness(candidate_str):
+            # Fetch thickness string from candidate string
+            if candidate_str is None:
+                return None
+
+            s = candidate_str.strip('- ').replace(',', '.')
+            s = s.replace('x', '@').replace('х', '@').replace('-', '@')
+            if '@' in s:
+                s = s[:s.index('@')]
+            try:
+                if float(s) > 100:
+                    return None
+                else:
+                    return float(s)
+            except:
+                # If doesnt cast or is too large for thickness
+                pass
+            return None
+
+        candidate_str = preprocess(material_string)
+        candidate = get_best_candidate(candidate_str)
+        thickness = fetch_thickness(candidate)
+        return thickness
+
+    def _fetch_detail_name(self, detail_name):
+        if detail_name is None:
+            return None
+        try:
+            name = detail_name.split()[0].lower()
+            return name
+        except:
+            return None
 
     def _create_responce(self, price, mass, material, linsizes, techprocesses):
         return {'price': price,
@@ -171,26 +231,13 @@ class CalcDetailBySchemaHandler(RequestHandler):
 
         linsizes = self._predict_linsizes(img)
         price = price_model.predict_price(features, linsizes)
-        operations = self._predict_operations(img)
-        # Это самый ужасный костыль в моей жизни
-        norms, ops = self._predict_norms(img, material, mass, )
-        if ops is None:
-            ops = operations
 
-        ops_objects = []
-        iterable = ops or norms
-        if iterable is not None:
-            for i in range(len(iterable)):
-                if ops is None or i >= len(ops):
-                    op = None
-                else:
-                    op = ops[i]
-                if norms is None or i >= len(ops):
-                    norm = None
-                else:
-                    norm = norms[i]
-                obj = {'name': op, 'norm': norm}
-                ops_objects.append(obj)
+        thickness = self._fetch_material_thickness(material)
+        detail_name = self._fetch_detail_name(self.get_argument('title', None))
+        detail_name = detail_name or self._fetch_detail_name(material)
+        ops_and_norms = self._predict_ops_and_norms(img, detail_name, mass, thickness)
+        make_obj = lambda op_norm: {'name': op_norm[0], 'norm': op_norm[1]}
+        ops_objects = list(map(make_obj, ops_and_norms))
 
         info = self._create_responce(price, mass, material, linsizes, ops_objects)
         logger.info('calc_detail', 'ok', {'size': [size_x, size_y, size_z], 'mass': mass, 'material': material})

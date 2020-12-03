@@ -29,7 +29,7 @@ def _convert_detail_name_to_ohe(curdetail, detail_names):
 def predict_operations_and_norms(img, detail_name:str, mass:float, thickness:float,
                                  length:float = None, width:float = None, mass_des:float=None):
     predicted_ops = predict_operations(detail_name, mass, thickness, mass_des)
-    if predicted_ops is None: return None
+    if predicted_ops is None: return []
     predicted_norms = predict_norms(img, detail_name, mass, thickness, length, width)
     if predicted_norms is None: predicted_norms = {}
     return [(op, predicted_norms.get(op)) for op in predicted_ops]
