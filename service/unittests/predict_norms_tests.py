@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 from predict_norms import api
 import yaml
+from collections import OrderedDict
 
 ###########
 ## utils ##
@@ -39,6 +40,7 @@ def read_gray(pt):
 _default_length = 100
 _profilnaya_operation = 'профильно-вырезная электрофизическая лучевая лазерная'
 
+
 def _check_pred(name, filepath, detail, mass ,thickness, ops, profilnaya_norm):
     prefix = f'Test {name}: '
     img = read_gray(filepath)
@@ -50,6 +52,13 @@ def _check_pred(name, filepath, detail, mass ,thickness, ops, profilnaya_norm):
     assert np.abs(
         profilnaya_norm_pred - profilnaya_norm) < 0.05, prefix + f"Incorrect norm predicted for {_profilnaya_operation}"
     assert np.all(np.array(list(norms_pred.values())) >= 0), prefix + "Norm predictions must be >= 0"
+    comb_pred = api.predict_operations_and_norms(img, detail, mass, thickness,_default_length, _default_length)
+    assert (isinstance(comb_pred, (list,tuple))
+            and isinstance(comb_pred[0], (list,tuple))
+            and all([len(el) == 2 for el in comb_pred])), "`predict_operations_and_norms` must return list of pairs (operation, norm)"
+    comb_pred = OrderedDict(comb_pred)
+    assert list(comb_pred.keys()) == ops_pred, 'combined prediction operations do not match operations prediction'
+    assert all([v == norms_pred.get(k) for (k,v) in comb_pred.items()]), 'combined prediction norms do not match norms prediction'
 
 
 def main():

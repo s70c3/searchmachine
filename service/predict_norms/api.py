@@ -26,6 +26,14 @@ def _convert_detail_name_to_ohe(curdetail, detail_names):
     r[detail_names.index(curdetail)] = 1
     return r
 
+def predict_operations_and_norms(img, detail_name:str, mass:float, thickness:float,
+                                 length:float = None, width:float = None, mass_des:float=None):
+    predicted_ops = predict_operations(detail_name, mass, thickness, mass_des)
+    if predicted_ops is None: return None
+    predicted_norms = predict_norms(img, detail_name, mass, thickness, length, width)
+    if predicted_norms is None: predicted_norms = {}
+    return [(op, predicted_norms.get(op)) for op in predicted_ops]
+
 def predict_operations(detail_name:str, mass:float, thickness:float, mass_des:float=None)->np.ndarray:
     """
     Args:
@@ -53,7 +61,7 @@ def predict_norms(img, detail_name:str, mass:float, thickness:float, length:floa
         img: grayscale image array with values in range 0..255
         length: больший из габаритов
         width: меньший из габаритов
-    returns: operations and corresponing probabilities if successful else `None`
+    returns: operations and corresponing norms values if successful else `None`
     '''
     try:
         inp = common.img_to_model_input(img)
