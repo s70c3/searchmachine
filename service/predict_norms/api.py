@@ -5,9 +5,11 @@ from predict_norms.model import ConvModel
 from predict_norms import common
 from predict_norms.predict_profilnaya import predict_profilnaya
 from predict_norms.predict_gibka import predict_gibka
+from predict_norms.predict_termicheskaya import predict_termicheskaya
 
 _profilnaya_operation = 'профильно-вырезная электрофизическая лучевая лазерная'
 _gibka_operation = 'гибка'
+_termicheskaya_operation = 'термическая резка плазменно-дуговая'
 
 model_pt = './predict_norms/predict_norms.pth'
 with open ('./predict_norms/norms_operations.pkl', 'rb') as f:
@@ -76,6 +78,8 @@ def predict_norms(img, detail_name:str, mass:float, thickness:float, length:floa
         try: res[_profilnaya_operation] = predict_profilnaya(img, mass, detail_name, thickness)
         except: pass
         try: res[_gibka_operation] = predict_gibka(img, mass, detail_name, thickness)
+        except: pass
+        try: res[_termicheskaya_operation] = predict_termicheskaya(img, mass, detail_name, thickness)
         except: pass
         return res
     except:
