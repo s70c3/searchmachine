@@ -8,10 +8,10 @@ from predict_norms import common
 ## hardcoded constants ##
 #########################
 
-coef = 0.8
+coef = 0.2
 option = ['mass', 'details', 'thickness']
-threshold = [0, 0.25, 0.5, 0.75, 1, 2, 100000]
-values = [0.105189, 0.348, 0.601408, 0.885801, 1.424103, 3.0432]
+threshold = [0, 0.5, 1, 2, 100000]
+values = [0.21888, 0.7284, 1.30572, 3.42]
 
 #################
 ## read models ##
