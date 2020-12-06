@@ -8,8 +8,12 @@ class Validator(ABC):
     def get_parse_errors(self, request):
         pass
 
+
 class TablularDetailDataValidator(Validator):
     is_num = lambda _, s: all(map(lambda c: c.isdigit() or c in ',.', s))
+    def to_num(self, s):
+        s = s.replace(',', '.')
+        return abs(float(s))
     _errors = []
 
     def _check_size(self, size):
@@ -36,6 +40,7 @@ class TablularDetailDataValidator(Validator):
         try:
             size = request.get_argument('size', None)
             self._check_size(size)
+            self.sizes = [self.to_num(s) for s in size.split('-')]
         except AssertionError:
             msg = 'Should be string with 3 numbers separated by symbol "-"'
             msg = self._create_error_obj('size', size, msg)
@@ -44,22 +49,36 @@ class TablularDetailDataValidator(Validator):
 
     def get_parse_errors(self, request):
         self.parse_sizes(request)
-            
+        self.sizes = None if self.sizes is None else '-'.join([str(s) for s in self.sizes])
+        self.mass = request.get_argument('mass', None)
+        self.material = request.get_argument('material', None)
+        self.detail_name = request.get_argument('detail_name', None)
+        self.material_thickness = request.get_argument('material_thickness', None)
+
+        self.parse_sizes(request)
+
         try:
-            mass = request.get_argument('mass', None)
-            self._check_mass(mass)
+            self._check_mass(self.mass)
+            abs(float(self.mass.replace(',', '.')))
         except AssertionError:
             msg = 'Should be non-negative float number'
-            msg = self._create_error_obj('mass', mass, msg)
+            msg = self._create_error_obj('mass', self.mass, msg)
             self._errors.append(msg)
             
         try:
-            material = request.get_argument('material', None)
-            self._check_material(material)
+            self._check_material(self.material)
         except AssertionError:
-            msg = 'Should be string'
-            msg = self._create_error_obj('material', material, msg)
+            msg = 'Should be string with material data'
+            msg = self._create_error_obj('material', self.material, msg)
             self._errors.append(msg)
+
+        try:
+            self.material_thickness = float(self.material_thickness)
+        except: pass
+        try:
+            self.detail_name = request.get_argument('detail_name', None)
+        except: pass
+
         return self._errors
 
         

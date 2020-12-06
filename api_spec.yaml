@@ -1,0 +1,200 @@
+swagger: "2.0"
+info:
+  description: "REST YELLOT CALCULATOR API"
+  version: "1.0.0"
+  title: "YELLOT CALCULATOR API"
+host: "95.217.217.21:5022"
+basePath: "/"
+schemes:
+- "http"
+
+
+tags:
+- name: "calc_detail"
+- name: "calc_detail_schema"
+- name: "pack_details"
+- name: "files"
+- name: "helth"
+
+
+paths:
+  /calc_detail:
+    post:
+      tags:
+      - "calc_detail"
+      description: "Calculates detail price. Based on tabular detail data"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "size"
+        in: "query"
+        description: "Detail sizes separated with symbol -. Size must be float or integer. Example of valid size: 0.5-123-456"
+        required: true
+        type: "string"
+      - name: "mass"
+        in: "query"
+        description: "Detail mass in kg"
+        type: "number"
+        format: "double"
+        required: true
+      - name: "material"
+        in: "query"
+        description: "Material data. Example: Рулон БТ-БШ-О-0,55х1250 08пс-ОН-НР-1"
+        required: true
+        type: "string"
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            $ref: "#/definitions/PricePredictionResponce"
+            
+  /calc_detail_schema:
+    post:
+      tags:
+      - "calc_detail_schema"
+      description: "Calculates detail price and techprocesses. Based on mix of scheme detail data and given tabular data. The most part of parameters will try to be fetched from pdf scheme. If valid parameter provided in request, it used for prediction. If paramter not provided, trying to predict it by scheme. If errors due prediction encountered, error responce will be returned"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "pdf_link"
+        in: "query"
+        required: true
+        type: "string"
+        description: "link to detail pdf schema"
+      - name: "size"
+        in: "query"
+        description: "Detail sizes separated with symbol -. Size must be float or integer. Example of valid size: 0.5-123-456"
+        required: true
+        type: "string"
+      - name: "detail_name"
+        in: "query"
+        type: "string"
+        required: true
+      - name: "mass"
+        in: "query"
+        description: "Detail mass in kg"
+        type: "number"
+        format: "double"
+      - name: "material"
+        in: "query"
+        description: "Material data. Example: Рулон БТ-БШ-О-0,55х1250 08пс-ОН-НР-1"
+        type: "string"
+      - name: "material_thickness"
+        in: "query"
+        description: "Thickness of material. By default, it shoud be fetched automatically from material string. But sometimes thickness not defined clearly in there. If error with thickness occures, use this parameter to pass thickness explicitly"
+        type: "number"
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            $ref: "#/definitions/SchemaPricePredictionResponce"          
+  
+  /helth:
+    get:
+      tags:
+      - "helth"
+      description: "Check if server is alive"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            type: "object"
+            properties:
+              status:
+                type: "string"
+                default: "working"
+   
+definitions:
+  PricePredictionResponce:
+    type: "object"
+    properties:
+      price:
+        type: "number"
+        description: "Predicted price"
+      linsizes:
+        type: "array"
+        items:
+          type: "number"
+          description: "Size recognized on pdf schema"
+      techprocesses:
+        type: "array"
+        items:
+          $ref: "#/definitions/Techprocess"
+      info:
+        type: "object"
+        properties:
+          predicted_by:
+            type: "object"
+            properties:
+              tabular:
+                type: "boolean"
+                default: True
+              scheme:
+                type: "boolean"
+                default: False
+          errors:
+            type: "array"
+            items:
+              type: "object"
+              properties:
+                description:
+                  type: "string"
+                  description: "Description of the error"
+          
+  Techprocess:
+    type: "object"
+    description: "Info about techprocess"
+    properties:
+      name:
+        type: "string"
+        description: "Name of techprocess"
+      norm:
+        type: "number"
+        description: "Time norm of current techprocess for detail. May be null"
+  
+  SchemaPricePredictionResponce:
+    type: "object"
+    properties:
+      price:
+        type: "number"
+        description: "Predicted price"
+      linsizes:
+        type: "array"
+        items:
+          type: "number"
+          description: "Size recognized on pdf schema"
+      techprocesses:
+        type: "array"
+        items:
+          $ref: "#/definitions/Techprocess"
+      material_thickness:
+        type: "number"
+      info:
+        type: "object"
+        properties:
+          predicted_by:
+            type: "object"
+            properties:
+              tabular:
+                type: "boolean"
+                default: false
+              scheme:
+                type: "boolean"
+                default: true
+          errors:
+            type: "array"
+            items:
+              type: "object"
+              properties:
+                description:
+                  type: "string"
+                  description: "Description of the error"
+          
