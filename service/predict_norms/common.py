@@ -2,8 +2,6 @@ import cv2
 import torch
 import predict_operations.detection
 
-def _extract_projections(img):
-    return predict_operations.detection.crop_conturs(img)
 
 def _preprocess(img):
     img = cv2.resize(img, (150,150))
@@ -12,7 +10,9 @@ def _preprocess(img):
 
 def np(t): return t.cpu().detach().numpy()
 
-def img_to_model_input(img):
-    projections = _extract_projections(img)
-    projections = list(map(_preprocess, _extract_projections(img)))
+def extract_projections(img):
+    return predict_operations.detection.crop_conturs(img)
+
+def projections_to_model_input(projections):
+    projections = list(map(_preprocess, projections))
     return [projections]
