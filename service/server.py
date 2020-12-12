@@ -122,7 +122,7 @@ class CalcDetailBySchemaHandler(RequestHandler):
         return mass, material
 
     def _predict_ops_and_norms(self, pdf_img, material, mass, thickness, length, width):
-        ops_norms = predict_operations_and_norms(pdf_img, material, mass, thickness, length, width)
+        ops_norms = predict_operations_and_norms(pdf_img, material, mass, thickness, length, width).result
         return ops_norms
 
     def _create_broken_pdf_responce(self, price):

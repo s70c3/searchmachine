@@ -59,15 +59,15 @@ def _predict_tabular(mass, detail_name, thickness):
     pred_class = _clf_cl.predict(inp)
     return values[int(pred_class[0])]
 
-def _predict_img(img):
-    inp = common.img_to_model_input(img)
+def _predict_img(img_projections):
+    inp = common.projections_to_model_input(img_projections)
     with torch.no_grad():
         output = _img_model(inp)
     return np.clip(common.np(output), a_min=0, a_max=None)[0][0]
 
-def predict_termicheskaya(img, mass, detail_name, thickness):
+def predict_termicheskaya(img_projections, mass, detail_name, thickness):
     _check_values(mass, detail_name, thickness)
     tab_pred = _predict_tabular(mass, detail_name, thickness)
-    img_pred =_predict_img(img)
+    img_pred =_predict_img(img_projections)
     return coef * tab_pred + (1 - coef) * img_pred
 
