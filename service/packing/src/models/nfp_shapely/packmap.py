@@ -40,7 +40,7 @@ class Packmap:
     
     def _calc_kim(self, polygon):
         # Assume that given polygon doesnt intersects with other
-        packmap_shape = self._get_packmap_bounds(polygon)
+        packmap_shape = (self.w, self.h) #self._get_packmap_bounds(polygon)
         packmap_square = packmap_shape[0] * packmap_shape[1]
         
         total_square = 0.
@@ -77,7 +77,7 @@ class Packmap:
         
         scores = []
         for poly in self.polygons:
-            for coord in list(poly.get_points()):
+            for coord in list(poly.get_points()) + list(poly.get_bounds_coords()):
                 cur_poly = affinity.translate(polygon.spoly, xoff=coord[0], yoff=coord[1])
                 
                 # check if polygon fits the packmap

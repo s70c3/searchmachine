@@ -5,6 +5,8 @@ pandas
 sklearn
 catboost
 torch
+torchvision
+tqdm
 pyocr
 opencv-python
 Pillow

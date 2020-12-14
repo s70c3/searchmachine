@@ -16,6 +16,14 @@ class Figure:
         # print('poiiints', list(self.spoly.exterior.coords[:-1]))
         return list(self.spoly.exterior.coords[:-1]) # last is equal to first
     
+    def get_bounds_coords(self):
+        w0, h0, w1, h1 = self.spoly.bounds
+        strange_margin = 2
+        return [(w0-strange_margin, h0-strange_margin),
+                (w0-strange_margin, h1+strange_margin),
+                (w1+strange_margin, h0-strange_margin),
+                (w1+strange_margin, h1+strange_margin)]
+    
     def get_shape(self):
         minx, miny, maxx, maxy = self.bounds
         w, h = maxx-minx, maxy-miny

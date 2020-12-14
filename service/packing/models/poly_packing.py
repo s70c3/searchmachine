@@ -6,7 +6,7 @@ from .utils.math import round_arr, mean, mul
 from .utils.save import save_rendered_packings
 from .polygon_packing_model.figure import Figure
 from .polygon_packing_model.packmap import Packmap
-from .polygon_packing_model.pack_strategies import pack_1_sides as pack_strategy
+from .polygon_packing_model.pack_strategies import pack_4_sides as pack_strategy
 
 RETURN_GIVEN_DATA = False
 

@@ -5,6 +5,7 @@ from .figure import Figure
 
 
 def main(packmap, figures, pack_f, logging=True):
+    figures = sorted(figures, key=lambda f: -f.area)
     for i, p in tqdm(enumerate(figures), total=len(figures)):
         best_fig, best_res = pack_f(packmap, p)
         
