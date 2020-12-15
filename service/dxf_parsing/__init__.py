@@ -8,7 +8,7 @@ def optimize_contour(points):
     points = np.array(list(map(list, points)))
     points = compressing.points_sequence_to_lines(points)
     points = compressing.filter_points_duplicates(points)
-    points = compressing.skew_lines_to_pair_points(points)
+#     points = compressing.skew_lines_to_pair_points(points)
     points = move_to_00(points)
     return points
 

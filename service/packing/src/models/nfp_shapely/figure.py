@@ -2,23 +2,35 @@ from shapely import geometry, affinity
 
 
 class Figure:
-    def __init__(self, points, detail=None):
+    def __init__(self, points, detail=None, padding=5):
         '''
         @param points:  list[(x, y), ]
         @param detail:  Detail, for packing purposes
         '''
         self.spoly = geometry.Polygon(points)
+        self.spoly = self.spoly.simplify(tolerance=8)
         self.bounds = self.spoly.bounds
         self.area = self.spoly.area
         self.detail = detail
+        self.padding = padding
         
     def get_points(self):
-        # print('poiiints', list(self.spoly.exterior.coords[:-1]))
         return list(self.spoly.exterior.coords[:-1]) # last is equal to first
     
+    def get_padded_points(self):
+        poly = self.spoly.exterior.parallel_offset(self.padding,
+                                                   side='left',
+                                                   join_style=3,
+                                                   mitre_limit=0.1)
+        poly = Figure(list(poly.coords))
+        poly_w0, poly_h0, _, _ = poly.spoly.bounds
+        poly = poly.move(-poly_w0, -poly_h0)
+        coords = poly.get_points()
+        return coords
+
     def get_bounds_coords(self):
         w0, h0, w1, h1 = self.spoly.bounds
-        strange_margin = 2
+        strange_margin = self.padding//2
         return [(w0-strange_margin, h0-strange_margin),
                 (w0-strange_margin, h1+strange_margin),
                 (w1+strange_margin, h0-strange_margin),
