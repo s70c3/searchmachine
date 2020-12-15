@@ -9,6 +9,7 @@ class Figure:
         '''
         self.spoly = geometry.Polygon(points)
         self.spoly = self.spoly.simplify(tolerance=8)
+        self.spoly = affinity.translate(self.spoly, padding, padding)
         self.bounds = self.spoly.bounds
         self.area = self.spoly.area
         self.detail = detail

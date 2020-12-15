@@ -257,7 +257,7 @@ class CalcDetailBySchemaHandler(RequestHandler):
         # predict price
         features = DetailData(size_x, size_y, size_z, mass, material).preprocess()
         linsizes = self._predict_linsizes(img)
-        used_params['linsizes'] = 'linsizes'
+        used_params['linsizes'] = linsizes
         price = price_model.predict_price(features, linsizes)
 
 
