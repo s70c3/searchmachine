@@ -99,6 +99,10 @@ class DxfPackingParameters(PackingParametersBase):
                     w = self._get_or_default(item, 'width', -1, 'details -> #%d -> width' % idx)
                     h = self._get_or_default(item, 'height', 1, 'details -> #%d -> height' % idx)
                     dxf = item['dxf']
+                    if isinstance(dxf, str) and dxf.lower() == 'none':
+                        dxf = None
+                        self._check_field({}, 'dxf', 'detail -> #%d -> dxf' % idx)
+                        continue
                     detail = Detail(w, h, q, idx, dxf)
                     self.details.append(detail)
                 else:
