@@ -33,6 +33,37 @@ def points_sequence_to_lines(contour):
     return new_contour
 
 
+
+def skew_lines_to_pair_points(contour):
+    def get_k(p1, p2):
+        is_vertical = lambda p1, p2: p1[0] == p2[0]
+        is_horizontal = lambda p1, p2: p1[1] == p2[1]
+        is_same = lambda p1, p2: p1 == p2
+
+        if is_vertical(p1, p2) or is_same(p1, p2):
+            return None
+        if is_horizontal(p1, p2):
+            return 0
+        dx = p2[0] - p1[0]
+        dy = p2[1] - p1[1]
+        k = dy / dx
+        return k
+
+    contour = contour.tolist()
+    filtred_points = []
+
+    line_origin = contour[0]
+    for i, point in enumerate(contour[1:-1], start=1):
+        k_origin = get_k(line_origin, point)
+        k_skip = get_k(line_origin, contour[i+1])
+        if k_origin != k_skip:
+            filtred_points.append(point)
+            line_origin = point
+    filtred_points.append(contour[-1])
+    return np.array(filtred_points)
+
+
+
 def filter_points_duplicates(contour):
     """
     Deletes sequential duplicating points from contour
