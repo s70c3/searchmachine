@@ -80,6 +80,7 @@ def _to_pil(img):
 def predict_operations_and_norms_image_only(img):
     try: predicted_ops = pilpaper2operations(_to_pil(img))
     except Exception as e: return OpsNormsResponse(result=[], error=f"Failed to predict operations with exception {e}")
+    predicted_ops = [_.lower() for _ in predicted_ops]
     try: projections = common.extract_projections(img)
     except: return OpsNormsResponse(result=_ops_to_result(predicted_ops), error="Failed to extract projections from the image")
     try: predicted_norms = _predict_norms_img_only(projections)
