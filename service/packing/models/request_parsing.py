@@ -71,8 +71,7 @@ class RectPackingParameters(PackingParametersBase):
                     w, h = int(item['width']), int(item['height'])
                     q = int(item['quantity'])
                     dxf = self._get_or_default(item, 'dxf', None, 'detail -> #%d -> dxf' % idx)
-                    if isinstance(dxf, str) and dxf.lower() == 'none':
-                        dxf = None
+                    dxf = None
                     detail = Detail(w, h, q, idx, dxf)
                     self.details.append(detail)
                 else:
