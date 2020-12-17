@@ -7,8 +7,8 @@ from .figure import Figure
 
 class Packmap:
     def __init__(self, w, h):
-        self.w = w
-        self.h = h
+        self.w = int(w)
+        self.h = int(h)
         self.polygons = []
         
     def _get_packmap_bounds(self, extra_polygon=None):
