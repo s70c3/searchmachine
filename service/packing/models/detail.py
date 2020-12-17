@@ -1,3 +1,5 @@
+import os
+import numpy as np
 from dataclasses import dataclass
 from .dxf_parsing import load_optimized_dxf
 from shapely.geometry import Polygon
@@ -15,7 +17,11 @@ class Detail:
     def load_dxf_points(self):
         assert self.dxf_name is not None, 'for dxf loading dxf path should be provided'
         # default dxf normalization
-        contour = load_optimized_dxf(DXF_BASE_PATH + self.dxf_name)
+        if not os.path.exists(DXF_BASE_PATH + self.dxf_name):
+            w, h = self.w, self.h
+            contour = np.array([(0, 0), (w, 0), (w, h), (0, h)])
+        else:
+            contour = load_optimized_dxf(DXF_BASE_PATH + self.dxf_name)
         print('Contour %s with %d points' % (self.dxf_name, contour.shape[0]))
         return contour
 
