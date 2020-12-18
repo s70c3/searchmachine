@@ -18,4 +18,4 @@ def save_rendered_packings(maps):
         img.save(FILE_FOLDER+'{}_{}.png'.format(prefix, i))
     os.system('cd {folder}; zip {prefix}_packings.zip {prefix}_*.png'.format(folder=FILE_FOLDER, prefix=prefix))
     os.system('rm {}{}_*.png'.format(FILE_FOLDER, prefix))
-    return FILE_FOLDER + str(prefix) + '_packings.zip'
+    return 'files/' + str(prefix) + '_packings.zip'

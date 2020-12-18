@@ -34,7 +34,7 @@ def make_app():
             ('/pack_details', PackDetailsRectangular),
             ('/pack_details_polygonal', PackDetailsPolygonal),
             ('/pack_details_neural', PackDetailsNeural),
-            ('/files/(.*)', SendfileHandler, {'path': os.getcwd() + '/service/files/'})]
+            ('/files/(.*)', SendfileHandler, {'path': os.getcwd() + '/packing/models/files/'})]
     return Application(urls)
 
 

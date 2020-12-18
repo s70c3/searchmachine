@@ -142,6 +142,7 @@ def pack_figures(figures, material):
     figures = sorted(figures, key=lambda fig: (-fig.get_shape()[0], -fig.get_shape()[1]))
     inserted = Counter()
     packmap = Packmap(*material)
+#     print('left to pack %d figures' % )
 
     for fig in figures:
         while fig.detail.quantity > 0:
