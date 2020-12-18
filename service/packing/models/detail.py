@@ -22,6 +22,7 @@ class Detail:
             contour = np.array([(0, 0), (w, 0), (w, h), (0, h)])
         else:
             contour = load_optimized_dxf(DXF_BASE_PATH + self.dxf_name)
+
         print('Contour %s with %d points' % (self.dxf_name, contour.shape[0]))
         return contour
 
@@ -29,7 +30,11 @@ class Detail:
         assert self.dxf_name is not None
         points = self.load_dxf_points()
         maxx, maxy = max(points[:, 0]), max(points[:, 1])
+        self.w, self.h = maxx, maxy
         return maxx, maxy
+    
+    def get_size(self):
+        return self.w, self.h
 
     def rotate(self):
         self.w, self.h = self.h, self.w

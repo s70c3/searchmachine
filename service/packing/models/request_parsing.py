@@ -111,11 +111,16 @@ class DxfPackingParameters(PackingParametersBase):
 
     def all_details_fits_material(self):
         for idx, detail in enumerate(self.details):
+            
             w, h = detail.get_dxf_size()
             if w >= self.material_width or h >= self.material_height:
-                msg = 'detail %d  size (%d, %d) doesnt fit to material size (%d, %d)' % (idx,
-                                                                                         w, h,
-                                                                                         self.material_width,
-                                                                                         self.material_height)
-                self.errors.append({'wrong_param': msg})
+                
+                self.details[idx].rotate()
+                w, h = self.details[idx].get_size()
+                if w >= self.material_width or h >= self.material_height:
+                    msg = 'detail %d  size (%d, %d) doesnt fit to material size (%d, %d)' % (idx,
+                                                                                             w, h,
+                                                                                             self.material_width,
+                                                                                             self.material_height)
+                    self.errors.append({'wrong_param': msg})
         return len(self.errors) == 0
