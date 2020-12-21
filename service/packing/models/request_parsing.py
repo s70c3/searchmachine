@@ -98,11 +98,12 @@ class DxfPackingParameters(PackingParametersBase):
                     w = self._get_or_default(item, 'width', -1, 'details -> #%d -> width' % idx)
                     h = self._get_or_default(item, 'height', 1, 'details -> #%d -> height' % idx)
                     dxf = item['dxf']
-                    if isinstance(dxf, str) and dxf.lower() == 'none':
-                        dxf = None
-                        self._check_field({}, 'dxf', 'detail -> #%d -> dxf' % idx)
-                        continue
                     detail = Detail(w, h, q, idx, dxf)
+                    
+                    dxf_load_errors = detail.get_loading_errors()
+                    if len(dxf_load_errors):
+                        self.warnings.append({'dxf_load_error': 'detail -> #%d -> dxf. Rect with sides %d %d used as default dxf' % (idx, w, h)})
+                    
                     self.details.append(detail)
                 else:
                     # broken details data doesnt fix here, just passing. Developers
@@ -113,11 +114,11 @@ class DxfPackingParameters(PackingParametersBase):
         for idx, detail in enumerate(self.details):
             
             w, h = detail.get_dxf_size()
-            if w >= self.material_width or h >= self.material_height:
+            if w > self.material_width or h > self.material_height:
                 
                 self.details[idx].rotate()
                 w, h = self.details[idx].get_size()
-                if w >= self.material_width or h >= self.material_height:
+                if w > self.material_width or h > self.material_height:
                     msg = 'detail %d  size (%d, %d) doesnt fit to material size (%d, %d)' % (idx,
                                                                                              w, h,
                                                                                              self.material_width,

@@ -23,7 +23,19 @@ class Figure:
                                                    side='left',
                                                    join_style=3,
                                                    mitre_limit=0.1)
-        poly = Figure(list(poly.coords))
+        try:
+            xs, ys = poly.coords.xy
+        except Exception as e:
+            try:
+                xs, ys = poly.envelope.exterior.coords.xy
+            except:
+                xs, ys = self.spoly.exterior.coords.xy
+
+        xs = list(xs)
+        ys = list(ys)
+        coords = list(zip(xs, ys))
+        poly = Figure(coords)
+
         poly_w0, poly_h0, _, _ = poly.spoly.bounds
         poly = poly.move(-poly_w0, -poly_h0)
         coords = poly.get_points()

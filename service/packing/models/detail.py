@@ -14,16 +14,34 @@ class Detail:
     idx: int
     dxf_name: str = None
 
+    def get_loading_errors(self):
+        # tries to load dxf, returns object with errors
+        errors = []
+        
+        if self.dxf_name.lower() == 'none':
+            errors.append('dxf not provided. Expected dxf file name, found None')
+            return errors
+        
+        if not os.path.exists(DXF_BASE_PATH + self.dxf_name):
+            errors.append('Cant find dxf on disk')
+            return errors
+        try:
+            contour = load_optimized_dxf(DXF_BASE_PATH + self.dxf_name)
+        except Exception as e:
+            errors.append('Cant load dxf. Error: ' + str(e))
+        return errors
+            
+        
     def load_dxf_points(self):
         assert self.dxf_name is not None, 'for dxf loading dxf path should be provided'
         # default dxf normalization
-        if not os.path.exists(DXF_BASE_PATH + self.dxf_name):
+        try:
+            contour = load_optimized_dxf(DXF_BASE_PATH + self.dxf_name)
+            print('Contour %s with %d points' % (self.dxf_name, contour.shape[0]))
+        except:
             w, h = self.w, self.h
             contour = np.array([(0, 0), (w, 0), (w, h), (0, h)])
-        else:
-            contour = load_optimized_dxf(DXF_BASE_PATH + self.dxf_name)
-
-        print('Contour %s with %d points' % (self.dxf_name, contour.shape[0]))
+            print('Contour %s loading error' % self.dxf_name)
         return contour
 
     def get_dxf_size(self):
