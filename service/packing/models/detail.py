@@ -1,10 +1,11 @@
 import os
 import numpy as np
 from dataclasses import dataclass
-from .dxf_parsing import load_optimized_dxf
+from .dxf_parsing import load_optimized_dxf, load_optimized_json_dxf
 from shapely.geometry import Polygon
 
 DXF_BASE_PATH = "/data/detail_price/dxf_хпц/dxf_ХПЦ_ТВЗ/"
+JSON_BASE_PATH =  "/data/detail_price/dxf_хпц/jsoned/"
 
 @dataclass
 class Detail:
@@ -13,32 +14,43 @@ class Detail:
     quantity: int
     idx: int
     dxf_name: str = None
+    dxf_points: list = None
 
     def get_loading_errors(self):
         # tries to load dxf, returns object with errors
         errors = []
+        json_name = self.dxf_name.replace('.DXF', '.json').replace('.dxf', '.json')
         
         if self.dxf_name.lower() == 'none':
             errors.append('dxf not provided. Expected dxf file name, found None')
             return errors
         
-        if not os.path.exists(DXF_BASE_PATH + self.dxf_name):
-            errors.append('Cant find dxf on disk')
-            return errors
-        try:
-            contour = load_optimized_dxf(DXF_BASE_PATH + self.dxf_name)
-        except Exception as e:
-            errors.append('Cant load dxf. Error: ' + str(e))
+        if not os.path.exists(JSON_BASE_PATH + json_name):
+            if not os.path.exists(DXF_BASE_PATH + self.dxf_name):
+                errors.append('Cant find dxf on disk')
+                return errors
+            else:
+                # load dxf
+                try:
+                    contour = load_optimized_dxf(DXF_BASE_PATH + self.dxf_name)
+                    self.dxf_points = contour
+                except Exception as e:
+                    errors.append('Cant load dxf. Error: ' + str(e))
+        else:
+            # load from json (faster)
+            contour = load_optimized_json_dxf(JSON_BASE_PATH + json_name)
+            
         return errors
             
         
     def load_dxf_points(self):
         assert self.dxf_name is not None, 'for dxf loading dxf path should be provided'
-        # default dxf normalization
-        try:
-            contour = load_optimized_dxf(DXF_BASE_PATH + self.dxf_name)
+        # dxf_points are preloaded by get_loading_errors() if it correct. If incorrect, set 
+        # default dxf - rect of given size
+        if self.dxf_points is not None:
+            contour = self.dxf_points # load_optimized_dxf(DXF_BASE_PATH + self.dxf_name)
             print('Contour %s with %d points' % (self.dxf_name, contour.shape[0]))
-        except:
+        else:
             w, h = self.w, self.h
             contour = np.array([(0, 0), (w, 0), (w, h), (0, h)])
             print('Contour %s loading error' % self.dxf_name)

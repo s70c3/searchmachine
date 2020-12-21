@@ -1,4 +1,5 @@
 import numpy as np
+import json
 from .parsing import get_contour_from_dxf
 from . import compressing
 from .utils import move_to_00
@@ -18,3 +19,8 @@ def load_optimized_dxf(path):
     return dxf
 
 
+def load_optimized_json_dxf(path):
+    dxf = json.load(open(path))
+    dxf = np.array(dxf)
+    dxf = optimize_contour(dxf)
+    return dxf

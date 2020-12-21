@@ -102,7 +102,7 @@ class DxfPackingParameters(PackingParametersBase):
                     
                     dxf_load_errors = detail.get_loading_errors()
                     if len(dxf_load_errors):
-                        self.warnings.append({'dxf_load_error': 'detail -> #%d -> dxf. Rect with sides %d %d used as default dxf' % (idx, w, h)})
+                        self.warnings.append({'dxf_load_error': 'detail -> #%d -> dxf. Rect with sides %d %d used as default dxf. Errors: %s' % (idx, w, h, str(dxf_load_errors))})
                     
                     self.details.append(detail)
                 else:
