@@ -10,12 +10,10 @@ class KDTree:
         
         self.child_l = None
         self.child_r = None
-        
-        
+
     def _is_root(self):
         return self.child_l == None and self.child_r == None
-        
-        
+
     def _get_square(self):
         w = self.xy_r[0] - self.xy_l[0]
         h = self.xy_r[1] - self.xy_l[1]
@@ -28,7 +26,6 @@ class KDTree:
     
     def _get_rect(self):
         return self.xy_l, self.xy_r
-    
         
     def insert(self, r_w, r_h, data=None):
         assert r_w is not None
@@ -51,14 +48,12 @@ class KDTree:
                 return True
         
         return False
-            
-    
+
     def _fits(self, r_w, r_h):
         w = self.xy_r[0] - self.xy_l[0]
         h = self.xy_r[1] - self.xy_l[1]
         return w >= r_w and h >= r_h
-        
-        
+
     def _insert(self, r_w, r_h, data=None):
         if self.has_data:
             return False
@@ -97,8 +92,7 @@ class KDTree:
                 return True
             
             return False
-        
-        
+
     def __repr__(self, margin=0):
         tabs = ' ' * margin
         childl = self.child_l.__repr__(margin+1) if self.child_l else '-'
@@ -127,7 +121,8 @@ sum_square_lst = lambda wh_arr: sum(list(map(lambda wh: wh[0]*wh[1], wh_arr)))
 #         sq += shape[0] * shape[1] * q
 #     return sq
     
-    
+
+PADDING = 2
 def max_fill_tree_fast(tree, elements, printing=False, visualize=False):
     # Fills one tree with given element until in possible
     # @param  tree       empty kd tree
@@ -139,7 +134,7 @@ def max_fill_tree_fast(tree, elements, printing=False, visualize=False):
     
     for elem in elements:
         while elem.quantity > 0:
-            res = tree.insert(elem.w, elem.h, elem.dxf_name)
+            res = tree.insert(elem.w+PADDING, elem.h+PADDING, elem.dxf_name)
             if not res:
 #                 print('cant insert')
                 break # stop fill tree with shape and try next shape

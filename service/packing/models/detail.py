@@ -41,7 +41,6 @@ class Detail:
             contour = load_optimized_json_dxf(JSON_BASE_PATH + json_name)
             
         return errors
-            
         
     def load_dxf_points(self):
         assert self.dxf_name is not None, 'for dxf loading dxf path should be provided'

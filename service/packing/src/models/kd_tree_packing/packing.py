@@ -98,7 +98,7 @@ def fit_trees(details, material, visualize=False):
         if w > material[0] or h > material[1]:
             detail.rotate()
             
-    
+    prev_q = -1
     # fit details with minimum trees
     while lists == 0 or get_total_q(details) > 0:
         tree = KDTree((0,0), material)
@@ -130,10 +130,11 @@ def fit_trees(details, material, visualize=False):
             print('cant insert any detail')
             break#raise PackError
             
-        if lists >= 10000:
+        if lists >= 10000 or prev_q == get_total_q(details):
             print('Endless error')
-            return -1, [], []
-            
+            raise PackError
+            # return -1, [], [], []
+        prev_q = get_total_q(details)
     
     if results[-1] == 0.:
         results = results[:-1]
