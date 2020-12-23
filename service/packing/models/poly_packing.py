@@ -144,6 +144,7 @@ def pack_figures(figures, material):
     packmap = Packmap(*material)
 #     print('left to pack %d figures' % )
 
+    packed_n = 0
     for fig in figures:
         while fig.detail.quantity > 0:
             res_fig, res_kim = pack_strategy(packmap, fig.copy(), )
@@ -152,7 +153,8 @@ def pack_figures(figures, material):
                 print('cant insert fig #%d' % fig.detail.idx)
                 break
             packmap.add_polygon(res_fig)
-            print('pack res fig #%d'% fig.detail.idx, res_kim)
+            print('%3d pack res fig #%d' % (packed_n, fig.detail.idx), res_kim)
+            packed_n += 1
             fig.detail.decrease(1)
             inserted[int(fig.detail.idx)] += 1
 

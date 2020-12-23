@@ -1,8 +1,22 @@
 import numpy as np
+import os
 from PIL import Image, ImageDraw
 from shapely import affinity
 
 from .figure import Figure
+
+
+def too_far(poly1, poly2):
+    def get_xy(spoly_xy):
+        return spoly_xy[0][0], spoly_xy[1][0]
+    x1, y1 = get_xy(poly1.centroid.xy)
+    x2, y2 = get_xy(poly2.centroid.xy)
+    w0, h0, w1, h1 = poly1.boundary.bounds
+    p1w, p1h = w1-w0, h1-h0
+    w0, h0, w1, h1 = poly2.boundary.bounds
+    p2w, p2h = w1 - w0, h1 - h0
+
+    return (abs(x1-x2) > p2w+p1w) and (abs(y1-y2) > p2h+p1h)
 
 
 class Packmap:
@@ -18,7 +32,16 @@ class Packmap:
         maxx = int(max([poly.bounds[2] for poly in polygons]))
         maxy = int(max([poly.bounds[3] for poly in polygons]))
         return maxx, maxy
+    
+    def render_packmap_with_poly(self, poly):
+        img = Image.new('L', self._get_packmap_bounds(), color=0)
+        im1 = ImageDraw.Draw(img)
         
+        for p in self.polygons + [poly]:
+            im1.polygon(list(map(lambda p: (int(p[0]), int(p[1])), p.get_points())), 
+                        fill=128, outline=255)
+        return img
+    
     def render_packmap(self):
         img = Image.new('L', self._get_packmap_bounds(), color=0)
         im1 = ImageDraw.Draw(img)
@@ -99,7 +122,9 @@ class Packmap:
                 # check intersection with other polygons
                 is_intersect = False
                 for p in self.polygons:
-
+                    if too_far(p.spoly, cur_poly):
+                        continue
+                    # if dist(p.center, cur_poly.centroid)
                     # TODO rude intersection check with circles
                     if p.spoly.overlaps(cur_poly) or \
                        p.spoly.equals(cur_poly) or \
@@ -108,6 +133,12 @@ class Packmap:
                         is_intersect = True
                         break
                 if is_intersect:
+#                     xs, ys = cur_poly.exterior.coords.xy
+#                     coords = list(zip(list(xs), list(ys)))
+#                     fig = Figure(coords)
+#                     render = self.render_packmap_with_poly(fig)
+#                     n = len(list(filter(lambda file: file.endswith('.png'), os.listdir('./'))))
+#                     render.save(f'./renders/render_{n}.png')
                     continue
                     
 #                 assert all(map(lambda p: not cur_poly.almost_equals(p.spoly, decimal=2), self.polygons))

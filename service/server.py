@@ -21,10 +21,18 @@ from packing.models.rect_packing_model.packing import pack_rectangular
 from packing.models.poly_packing import pack_polygonal
 # from packing.models.neural_packing import pack_neural
 from packing.models.request_parsing import RectPackingParameters, DxfPackingParameters
+from datetime import datetime as dt
 
 # To pack thousands of details on one list with rectangular packing (based on kd tree),
 # recursion  limit should be huge
 setrecursionlimit(10**6)
+PACKING_LOG_PATH = './packing/models/packings.log'
+def log(method, params, resp):
+    time = dt.now().strftime('%d/%m/%y %H:%M:%S')
+    with open(PACKING_LOG_PATH, 'a') as f:
+        msg = f"[{time}] /{method} | {params} | {resp}\n"
+        print(msg)
+        f.write(msg)
 
 def make_app():
     urls = [('/helth', HelthHandler),
@@ -327,6 +335,8 @@ class PackDetailsRectangular(RequestHandler):
         params = RectPackingParameters(params)
         errors_or_packing_info = pack_rectangular(params)
         logger.info('calc_detail', 'ok', errors_or_packing_info)
+        log('rect', json.loads(self.request.body.decode('utf-8')), errors_or_packing_info)
+
         self.write(errors_or_packing_info)
 
 
@@ -339,6 +349,7 @@ class PackDetailsPolygonal(RequestHandler):
         params = json.loads(self.request.body.decode('utf-8'))
         params = DxfPackingParameters(params)
         errors_or_packing_info = pack_polygonal(params)
+        log('poly', json.loads(self.request.body.decode('utf-8')), errors_or_packing_info)
         self.write(errors_or_packing_info)
 
 
