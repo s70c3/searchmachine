@@ -33,10 +33,8 @@ def fast_hist(arr, bins):
     return np.array(histed)
 
 
-
-
-       
 def raw_data_to_features(df):
+    print(df)
     materials = df['Материал'].copy()
 
     material_categories = set()
@@ -50,9 +48,21 @@ def raw_data_to_features(df):
     # set -> dict
     material_categories = {cat: i for i, cat in enumerate(list(material_categories))}
     print(material_freqs)
-    
-    
-    
+
+    details = df['Номенклатура'].copy()
+
+    details_categories = set()
+    details_categories.add('too_rare')
+    details_freqs = Counter()
+
+    for ix, cat in details.apply(lambda s: s.split()[0].lower()).iteritems():
+        details_categories.add(cat)
+        details_freqs[cat] += 1
+
+    # set -> dict
+    details_categories = {cat: i for i, cat in enumerate(list(material_categories))}
+    print(details_freqs)
+
     def filter_correct_dims(dims):
         dims_ = []
         for d in dims:
@@ -62,17 +72,25 @@ def raw_data_to_features(df):
                 pass
         return dims_
 
-
     df = df[df['Размер'].apply(lambda s: len(filter_correct_dims(s.lower().split('х'))) == 3)]
 
     mul = lambda arr: arr[0] * mul(arr[1:]) if len(arr) > 1 else arr[0]
     calc_vol = lambda params: mul([float(x) for x in filter_correct_dims(params.lower().split('х'))])
     calc_dims = lambda s: np.array([float(x) for x in filter_correct_dims(s.lower().split('х'))])
+
     def get_material(s):
         mat = s.split()[0].lower()
         if material_freqs[mat] < 70:
             mat = 'too_rare'
         return mat
+
+    def get_detail(s):
+        if len(s.split()) == 0:
+            return 'too_rare'
+        det = s.split()[0].lower()
+        if details_freqs[det] < 50:
+            det = 'too_rare'
+        return det
 
     def get_price_category(price, price_levels=5):
         if price < 10:
@@ -86,7 +104,6 @@ def raw_data_to_features(df):
         else:
             return 4
 
-
     ndf = pd.DataFrame()
     # raw features
     ndf['size1'] = df['Размер'].apply(calc_dims).apply(lambda v: sorted(v)[0])
@@ -96,8 +113,8 @@ def raw_data_to_features(df):
     ndf['mass'] = (df['Масса заготовки'].astype(float))
 
     # mass features
-    ndf['userful_mass_perc'] = (df['Масса ДЕС'] / df['Масса заготовки']).astype(float)
-    ndf['sqr_trash_mass'] = np.square((df['Масса заготовки'] - df['Масса ДЕС']).astype(float))
+    #     ndf['userful_mass_perc'] = (df['Масса ДЕС'] / df['Масса заготовки']).astype(float)
+    #     ndf['sqr_trash_mass'] = np.square((df['Масса заготовки'] - df['Масса ДЕС']).astype(float))
     ndf['log_mass'] = np.log1p(ndf.mass)
     ndf['sqrt_mass'] = np.sqrt(ndf.mass)
 
@@ -105,12 +122,12 @@ def raw_data_to_features(df):
     ndf['log_volume'] = np.log1p(ndf.volume)
 
     # other features
-    ndf['log_density']  = np.log(1000*ndf['mass'] / ndf['volume'])
+    ndf['log_density'] = np.log(1000 * ndf['mass'] / ndf['volume'])
     ndf['material_category'] = df['Материал'].apply(lambda mat: get_material(mat))
+    ndf['detail_category'] = df['Номенклатура'].apply(lambda det: get_detail(det))
     ndf['price_category'] = df['Цена'].apply(get_price_category)
 
     ndf['log_price'] = np.log(df['Цена'].astype(float))
-
 
     # Drop outliers
     ndf = ndf[ndf.volume > 10]
@@ -119,8 +136,6 @@ def raw_data_to_features(df):
     # ndf = ndf.drop(['size%d'% i for i in [1]],axis=1)
     # ndf = ndf.drop('mass volume'.split(), axis=1)
     # ndf = ndf[ (ndf.log_price > 2)]
-
-
 
     # indexed = ndf.copy()
     # indexed['detail_name'] = df['Номенклатура']
