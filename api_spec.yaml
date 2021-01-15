@@ -15,6 +15,7 @@ tags:
 - name: "pack_details"
 - name: "files"
 - name: "helth"
+- name: "get_params_by_schema"
 
 
 paths:
@@ -54,7 +55,7 @@ paths:
     post:
       tags:
       - "calc_detail_schema"
-      description: "Calculates detail price and techprocesses. Based on mix of scheme detail data and given tabular data. The most part of parameters will try to be fetched from pdf scheme. If valid parameter provided in request, it used for prediction. If paramter not provided, trying to predict it by scheme. If errors due prediction encountered, error responce will be returned"
+      description: "Calculates detail price and techprocesses with pdf schema. Techprocesses predicts by detail parameters and/or pdf schema. Techprocesses may be an empty array"
       consumes:
       - "application/json"
       produces:
@@ -79,20 +80,51 @@ paths:
         description: "Detail mass in kg"
         type: "number"
         format: "double"
+        required: true
       - name: "material"
         in: "query"
         description: "Material data. Example: Рулон БТ-БШ-О-0,55х1250 08пс-ОН-НР-1"
         type: "string"
+        required: true
       - name: "material_thickness"
         in: "query"
-        description: "Thickness of material. By default, it shoud be fetched automatically from material string. But sometimes thickness not defined clearly in there. If error with thickness occures, use this parameter to pass thickness explicitly"
+        description: "Thickness of the material"
         type: "number"
+        required: true
       responses:
         "200":
           description: "ok"
           schema:
-            $ref: "#/definitions/SchemaPricePredictionResponce"          
-  
+            $ref: "#/definitions/SchemaPricePredictionResponce"
+
+  /get_params_by_schema:
+    post:
+      tags:
+      - "get_params_by_schema"
+      description: "Calculates detail parameters based on given parameters and pdf schema. Use for calculating and/or validating parameters for /calc_detail_schema and etc. Validation applied automatically, null returned if prediction is invalid"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "pdf_link"
+        in: "query"
+        required: true
+        type: "string"
+        description: "link to detail pdf schema"
+      - name: "material"
+        in: "query"
+        required: false
+        type: "string"
+        description: "material of the detail. Used for fetch material thickness parameter. If not given, thickness predicted by extracted material. Example of material: Рулон БТ-БШ-О-0,55х1250 08пс-ОН-НР-1"
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            $ref: "#/definitions/ParamsBySchemaResponce"
+
+
+
   /helth:
     get:
       tags:
@@ -111,7 +143,7 @@ paths:
               status:
                 type: "string"
                 default: "working"
-   
+
 definitions:
   PricePredictionResponce:
     type: "object"
@@ -148,7 +180,7 @@ definitions:
                 description:
                   type: "string"
                   description: "Description of the error"
-          
+
   Techprocess:
     type: "object"
     description: "Info about techprocess"
@@ -159,42 +191,41 @@ definitions:
       norm:
         type: "number"
         description: "Time norm of current techprocess for detail. May be null"
-  
+
   SchemaPricePredictionResponce:
     type: "object"
     properties:
       price:
         type: "number"
         description: "Predicted price"
-      linsizes:
-        type: "array"
-        items:
-          type: "number"
-          description: "Size recognized on pdf schema"
       techprocesses:
         type: "array"
         items:
           $ref: "#/definitions/Techprocess"
-      material_thickness:
-        type: "number"
       info:
         type: "object"
         properties:
-          predicted_by:
-            type: "object"
-            properties:
-              tabular:
-                type: "boolean"
-                default: false
-              scheme:
-                type: "boolean"
-                default: true
+          warnings:
+            type: "array"
+            items:
+              type: "object"
           errors:
             type: "array"
             items:
               type: "object"
-              properties:
-                description:
-                  type: "string"
-                  description: "Description of the error"
-          
+      params:
+        type: "object"
+        description: "key-value pairs of parameters used for prediction"
+
+  ParamsBySchemaResponce:
+    type: "object"
+    properties:
+      mass:
+        type: "number"
+        description: "Predicted mass"
+      material:
+        type: "string"
+      material_thickness_by_img:
+        type: "string"
+      meterial_thickness_by_given_material:
+        type: "string"

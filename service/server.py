@@ -39,6 +39,7 @@ def make_app():
             ('/turnoff', TurnoffHandler),
             ('/calc_detail', CalcDetailByTableHandler),
             ('/calc_detail_schema', CalcDetailBySchemaHandler),
+            ('/get_params_by_schema', PredictParamsBySchemaHandler),
             ('/pack_details', PackDetailsRectangular),
             ('/pack_details_polygonal', PackDetailsPolygonal),
             ('/pack_details_neural', PackDetailsNeural),
@@ -81,56 +82,7 @@ class CalcDetailByTableHandler(RequestHandler):
         return self.write(info)
 
 
-class CalcDetailBySchemaHandler(RequestHandler):
-    def _predict_linsizes(self, pdf_img):
-        linsizes = ocr.extract_sizes(pdf_img)
-        return linsizes[1]
-
-    def _predict_nomenclature(self, pdf_img):
-
-        def detect_material(material_string):
-            m = material_string.lower()
-            for material in 'жесть круг лента лист петля проволока прокат профиль рулон сетка'.split():
-                if material in m:
-                    return material
-            return m
-
-        nomenclature_data = extract_nomenclature(np.array(pdf_img.convert('L')))
-        print('mass detected', nomenclature_data)
-        mass = nomenclature_data['mass']
-        if ',' in mass:
-            mass = mass.replace(',', '.')
-        material = nomenclature_data['material']
-        try:
-            material = detect_material(material)
-        except AttributeError: # if material is None
-            pass
-        return mass, material
-
-    def _predict_ops_and_norms(self, pdf_img, material, mass, thickness, length, width):
-        ops_norms = predict_operations_and_norms(pdf_img, material, mass, thickness, length, width)
-        result, error = ops_norms.result, ops_norms.error
-        if len(error) > 0:
-            return None, error
-        return result, None
-
-    def _predict_ops_and_norms_img(self, img):
-        ops_norms = predict_operations_and_norms_image_only(img)
-        if len(ops_norms.error) > 0:
-            return None, ops_norms.error
-        return ops_norms, None
-
-    def _create_broken_pdf_responce(self, price):
-        return {'price': price,
-                'linsizes': [],
-                'techprocesses': [],
-                'info': {'predicted_by': [{'tabular': True}, {'scheme': False}],
-                         'errors': [
-                             {'description': 'Cant predict techprocesses without pdf paper'},
-                             {'description': 'Cant predict linear sizes without pdf paper'}
-                         ]}
-                }
-
+class PredictParamsBySchemaHandler(RequestHandler):
     def _fetch_material_thickness(self, material_string):
         # Fetches thickness of material from the given string with material data
         # If cant fetch anything, returns None
@@ -186,122 +138,178 @@ class CalcDetailBySchemaHandler(RequestHandler):
                 pass
             return None
 
+        if material_string is None:
+            return None
         candidate_str = preprocess(material_string)
         candidate = get_best_candidate(candidate_str)
         thickness = fetch_thickness(candidate)
         return thickness
 
-    def _create_responce(self, price, mass, material, linsizes, techprocesses, thickness):
-        return {'price': price,
-                'linsizes': linsizes,
-                'mass': mass,
-                'material': material,
-                'techprocesses': techprocesses,
-                'material_thickness': thickness,
-                'info': {'predicted_by': [{'tabular': True}, {'scheme': True}],
-                         'errors': []}
-                }
+    def _predict_nomenclature(self, pdf_img):
 
-    def _get_prediction_failed_message(self, failed_predict_op, param_name, param_value, used_params, techprocesses):
-        return {'prediction_error': f'Cant read valid {param_name} from pdf file. {param_name} was not given in request params. Cant make predict {failed_predict_op} without it',
-                f'predicted_{param_name}': str(param_value),
-                'used_params': used_params,
-                'techprocesses': techprocesses}
+        def detect_material(material_string):
+            m = material_string.lower()
+            for material in 'жесть круг лента лист петля проволока прокат профиль рулон сетка'.split():
+                if material in m:
+                    return material
+            return m
+
+        nomenclature_data = extract_nomenclature(np.array(pdf_img.convert('L')))
+        print('mass detected', nomenclature_data)
+        mass = nomenclature_data['mass']
+        if ',' in mass:
+            mass = mass.replace(',', '.')
+        material = nomenclature_data['material']
+        try:
+            material = detect_material(material)
+        except AttributeError: # if material is None
+            pass
+        return mass, material
 
     def post(self):
-        # parse request data
-        used_params = {}
-
-        # parse pdf
+        # validate pdf
         pdf_validator = PDFValidator()
         parse_errors = pdf_validator.get_parse_errors(self)
         if len(parse_errors):
             self.write({'parse_error': 'Cant decode pdf. Maybe its not a pdf file or broken pdf'})
             return
         img = pdf_validator.get_image()
+        given_material = self.get_argument('material', None)
 
-        # predict techprocesses by image
-        make_obj = lambda op_norm: {'name': op_norm[0], 'norm': op_norm[1]}
-        ops_norms = predict_operations_and_norms_image_only(img)
-        default_techprocesses, err = ops_norms.result, ops_norms.error
-        if not err:
-            default_techprocesses = list(map(make_obj, default_techprocesses))
-        else:
-            default_techprocesses = []
+        pred_mass, pred_material = self._predict_nomenclature(img)
+        pred_thickness = self._fetch_material_thickness(pred_material)
+        req_material_thickness = self._fetch_material_thickness(given_material)
 
-        # parse sizes
+        params = {'mass': None,
+                  'material': None,
+                  'material_thickness_by_img': None,
+                  'meterial_thickness_by_given_material': None}
+        params_keys = 'mass material material_thickness_by_img meterial_thickness_by_given_material'.split()
+        params_classes = [MassParameter, MaterialParameter, ThicknessParameter, ThicknessParameter]
+        params_predicted = [pred_mass, pred_material, pred_thickness, req_material_thickness]
+        for key, val, Cls in zip(params_keys, params_predicted, params_classes):
+            val = Cls(predicted_value=val)
+            val, info = val.get()
+            if 'error' not in info:
+                params[key] = val
+
+        return self.write(params)
+
+
+class CalcDetailBySchemaHandler(RequestHandler):
+
+    def _predict_ops_and_norms(self, pdf_img, material, mass, thickness, length, width):
+        ops_norms = predict_operations_and_norms(pdf_img, material, mass, thickness, length, width)
+        result, error = ops_norms.result, ops_norms.error
+        if len(error) > 0:
+            return None, error
+        return result, None
+
+    def _predict_linsizes(self, pdf_img):
+        linsizes = ocr.extract_sizes(pdf_img)
+        return linsizes[1]
+
+    def _create_responce(self, price, params, techprocesses, errors, warnings):
+        res =  {'price': price,
+                'techprocesses': techprocesses,
+                'info': {'warnings': warnings, 'errors': errors},
+                'params': params
+                }
+        for key, val in params.items():
+            res['params'][key] = val
+        return res
+
+    def _fetch_request_params(self):
+        # Fetches, validates and parses paramteres below from request
+        # Returns filled dict from below
+        params = {'size_x': None, 'size_y': None, 'size_z': None,
+                  'mass': None,
+                  'material': None,
+                  'material_thickness': None,
+                  'detail_name': None}
+
+        # size
         sizes = SizeParameter(request_value=self.get_argument('size', None))
         sizes, info = sizes.get()
-        used_params['size'] = info
-        if 'error' in info:
-            report = self._get_prediction_failed_message('price', 'size', sizes, used_params, default_techprocesses)
-            self.write(report)
-            return
-        size_x, size_y, size_z = sizes
+        if 'error' not in info:
+            params['size_x'], params['size_y'], params['size_z'] = sizes
 
+        params_keys = 'mass material material_thickness detail_name'.split()
+        params_classes = [MassParameter, MaterialParameter, ThicknessParameter, DetailNameParameter]
+        for key, Cls in zip(params_keys, params_classes):
+            val = Cls(request_value=self.get_argument(key, None))
+            val, info = val.get()
+            if 'error' not in info:
+                params[key] = val
 
+        # params_dict = ParametersDict(is_primary=True, **params)
+        return params
 
-        # predict detail mass
-        pred_mass, pred_material = self._predict_nomenclature(img)
-        mass = MassParameter(request_value=self.get_argument('mass', None),
-                             predicted_value=pred_mass)
-        mass, info = mass.get()
-        used_params['mass'] = info
-        if 'error' in info:
-            report = self._get_prediction_failed_message('price', 'mass', mass, used_params, default_techprocesses)
-            self.write(report)
-            return
+    def _predict_price(self, params, img):
+        # If not enough params, return None
+        errors = []
+        size_x, size_y, size_z, mass, material = [params[key] for key in 'size_x size_y size_z mass material'.split()]
+        if any(list(map(lambda val: val is None, [size_x, size_y, size_z, mass, material]))):
+            errors.append({'parameters_error': 'not enough parameters for price prediction'})
 
-        # predict detail material
-        material = MaterialParameter(request_value=self.get_argument('material', None),
-                                     predicted_value=pred_material)
-        material, info = material.get()
-        used_params['material'] = info
-        if 'error' in info:
-            report = self._get_prediction_failed_message('price', 'material', material, used_params, default_techprocesses)
-            self.write(report)
-            return
-
-        # predict price
-        features = DetailData(size_x, size_y, size_z, mass, material).preprocess()
         linsizes = self._predict_linsizes(img)
-        used_params['linsizes'] = linsizes
+        features = DetailData(size_x, size_y, size_z, mass, material).preprocess()
         price = price_model.predict_price(features, linsizes)
+        return price, errors
 
+    def _predict_techprocesses(self, params, img):
+        errors = []
+        warnings = []
 
-        # predict thickness from material
-        thickness = ThicknessParameter(request_value=self.get_argument('material_thickness', None),
-                                       predicted_value=self._fetch_material_thickness(material))
-        thickness, info = thickness.get()
-        used_params['material_thickness'] = info
-        if 'error' in info:
-            report = self._get_prediction_failed_message('techprocesses', 'material_thickness', thickness, used_params, default_techprocesses)
-            self.write(report)
-            return
+        detail_name = params['detail_name']
+        thickness = params['material_thickness']
+        sizes = sorted([params['size_x'], params['size_y'], params['size_z']])
+        ops_and_norms = None
 
-        # get detail name
-        detail_name = DetailNameParameter(request_value=self.get_argument('detail_name', None))
-        detail_name, info = detail_name.get()
-        used_params['detail_name'] = info
-        if 'error' in detail_name:
-            report = self._get_prediction_failed_message('techprocesses', 'detail_name', detail_name, used_params, default_techprocesses)
-            self.write(report)
-            return
+        ## calc techprocesses by img
+        ops_norms = predict_operations_and_norms_image_only(img)
+        default_techprocesses, err = ops_norms.result, ops_norms.error
 
+        if (thickness is not None) and (detail_name is not None):
+            ops_and_norms, errors = self._predict_ops_and_norms(img, detail_name, params['mass'], thickness,
+                                                                length=sizes[-1], width=sizes[-2])
+        else:
+            warnings.append({'parameters_warning': 'Provide material_thickness and/or detail_name parameters for accurately calculating of techprocesses'})
+            # May be None
+            ops_and_norms = default_techprocesses
 
-        ops_and_norms, errors = self._predict_ops_and_norms(img, detail_name, mass, thickness, length=sorted(sizes)[-1], width=sorted(sizes)[-2])
         if ops_and_norms is None:
-            self.write({'prediction_error': 'Error with picture while predicting techprocesses. Predict by other params. Predictions are not accurate'+errors,
-                        'used_params': used_params,
-                        'techprocesses': default_techprocesses},
-                       )
-            return
+            ops_and_norms = []
 
         make_obj = lambda op_norm: {'name': op_norm[0], 'norm': op_norm[1]}
         ops_objects = list(map(make_obj, ops_and_norms))
+        return ops_objects, warnings
 
-        info = self._create_responce(price, mass, material, linsizes, ops_objects, thickness)
-        logger.info('calc_detail', 'ok', {'size': [size_x, size_y, size_z], 'mass': mass, 'material': material})
+    def post(self):
+        errors = []
+        warnings = []
+        params = self._fetch_request_params()
+
+        # parse pdf
+        pdf_validator = PDFValidator()
+        parse_errors = pdf_validator.get_parse_errors(self)
+        if len(parse_errors):
+            errors.append({'parse_error': 'Cant decode pdf. Maybe its not a pdf file or broken pdf'})
+            resp = self._create_responce(None, {}, params, errors, warnings)
+            return self.write(resp)
+
+        img = pdf_validator.get_image()
+
+        # predict price
+        price, price_errors = self._predict_price(params, img)
+        errors += price_errors
+
+        # predict techprocesses
+        ops_objects, techprocesses_warnings = self._predict_techprocesses(params, img)
+        warnings += techprocesses_warnings
+
+        info = self._create_responce(price, params, ops_objects, errors, warnings)
+        logger.info('calc_detail', 'ok', {'params': params, 'info': info})
         return self.write(info)
 
 

@@ -16,8 +16,6 @@ class ParameterI:
         if self.is_valid(predicted_value):
             self.predicted_value = self._parse(predicted_value)
 
-
-
     def is_valid(self, value):
         raise NotImplemented
 
@@ -118,3 +116,33 @@ class DetailNameParameter(ParameterI):
 
     def _parse(self, value):
         return str(value)
+
+
+class ParametersDict:
+    def __init__(self, is_primary=False, **kwargs):
+        self.is_primary = is_primary
+        self.params = {key:val for key,val in kwargs.items()}
+
+    def merge(self, other):
+        assert isinstance(other, ParametersDict)
+        assert (self.is_primary and not other.is_primary) or (not self.is_primary and other.is_primary), 'In merging dicts pair one should be primary'
+
+        if self.is_primary:
+            primary_d = self.params
+            second_d = other.params
+        else:
+            primary_d = self.params
+            second_d = other.params
+
+        params = {}
+        for key in primary_d.keys():
+            if primary_d[key] is not None:
+                val = primary_d[key]
+            elif second_d[key] is not None:
+                val = second_d[key]
+            else:
+                val = None
+            params[key] = val
+
+        new_param_dict = ParametersDict(is_primary=True, *params)
+        return new_param_dict
