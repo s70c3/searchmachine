@@ -37,6 +37,8 @@ class PDFValidationTests(unittest.TestCase):
         pdf_link = 'https://dev.smartprinting.ru/storage/4447.01.00.111.pdf'
         res = r.post(url, params={'pdf_link': pdf_link})
         assert self._is_valid(res)
-        
 
-url = "http://0.0.0.0:5022/get_params_by_schema"
+
+remote_url = 'http://95.217.217.21:5022/get_params_by_schema'
+local_url = "http://0.0.0.0:5022/get_params_by_schema"
+url = remote_url
