@@ -14,7 +14,7 @@ tags:
 - name: "calc_detail_schema"
 - name: "pack_details"
 - name: "files"
-- name: "helth"
+- name: "health"
 - name: "get_params_by_schema"
 
 
@@ -125,10 +125,10 @@ paths:
 
 
 
-  /helth:
+  /health:
     get:
       tags:
-      - "helth"
+      - "health"
       description: "Check if server is alive"
       consumes:
       - "application/json"

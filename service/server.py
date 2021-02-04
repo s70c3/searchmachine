@@ -1,6 +1,7 @@
 from sys import setrecursionlimit
 import re
 import os
+import copy
 import numpy as np
 import json
 from tornado.web import Application, RequestHandler, StaticFileHandler
@@ -35,7 +36,7 @@ def log(method, params, resp):
         f.write(msg)
 
 def make_app():
-    urls = [('/helth', HelthHandler),
+    urls = [('/health', HelthHandler),
             ('/turnoff', TurnoffHandler),
             ('/calc_detail', CalcDetailByTableHandler),
             ('/calc_detail_schema', CalcDetailBySchemaHandler),
@@ -43,6 +44,7 @@ def make_app():
             ('/pack_details', PackDetailsRectangular),
             ('/pack_details_polygonal', PackDetailsPolygonal),
             ('/pack_details_neural', PackDetailsNeural),
+            ('/pack_details_svgnest', PackDetailsSvgNest),
             ('/files/(.*)', SendfileHandler, {'path': os.getcwd() + '/packing/models/files/'})]
     return Application(urls)
 
@@ -360,6 +362,83 @@ class PackDetailsPolygonal(RequestHandler):
         log('poly', json.loads(self.request.body.decode('utf-8')), errors_or_packing_info)
         self.write(errors_or_packing_info)
 
+
+class PackDetailsSvgNest(RequestHandler):
+    """
+    Packing of polygon objects. Must include dxfs as a source of polygons
+    """
+
+    def post(self):
+        params = json.loads(self.request.body.decode('utf-8'))
+        try:
+            iterations = int(params['iterations'])
+        except:
+            return self.write({'errors': ['no iterations argument provided']})
+        try:
+            rotations = int(params['rotations'])
+        except:
+            return self.write({'errors': ['no rotations argument provided']})
+        params = DxfPackingParameters(params)
+        if len(params.errors) > 0:
+            return {'errors': params.errors, 'warnings': params.warnings}
+
+        # TODO add ids to shapes
+        shapes = []
+        idx = 1
+        for detail in params.details:
+            shape = self.load_shape(detail)
+            shapes_objs = [shape] * detail.quantity
+            for i in range(len(shapes_objs)):
+                shape_copy = copy.deepcopy(shape)
+                shape['id'] = idx + i
+                shapes.append(shape)
+            idx += len(shapes_objs)
+
+
+        shapes = self.prepare_shapes(params.material_width, shapes)
+
+        shapes = str(shapes).replace("'", '"')
+        path = 'packing/models/files/tmp1.json'
+        with open(path, 'w') as f:
+            f.write('{"container": { "width": '+str(params.material_width)+', "height": '+str(params.material_height)+' },')
+            f.write(' "shapes": ' + shapes)
+            f.write('}')
+        os.system(f"java -cp packing/models/nest4J.jar UseCase.Main {path} {iterations} {rotations}")
+        self.write({'status': 'ok', 'filepath': 'files/res.svg'})
+
+    def load_shape(self, detail):
+        points_np = detail.load_dxf_points()
+        points = points_np.tolist()
+        shape = [{'x': x, 'y': y} for (x,y) in points]
+        return {'points': shape, 'id': None}
+
+    def prepare_shapes(self, material_width, shapes):
+        ordered_shapes = []
+        curr_right_bound = material_width + 50
+        for shape in shapes:
+            minx, maxx = self._get_shape_xbounds(shape)
+            shape = self._translate_shape(shape, curr_right_bound - minx)
+
+            width = maxx - minx
+            curr_right_bound += width + 50
+            ordered_shapes.append(shape)
+        return ordered_shapes
+
+    def _get_shape_xbounds(self, shape):
+        minx = float('inf')
+        maxx = 0
+        for p in shape['points']:
+            x = p['x']
+            if x < minx:
+                minx = x
+            if x > maxx:
+                maxx = x
+        return minx, maxx
+
+    def _translate_shape(self, shape, dx):
+        for i, point in enumerate(shape['points']):
+            shape['points'][i]['x'] += dx
+        return shape
 
 class PackDetailsNeural(RequestHandler):
     def post(self):
