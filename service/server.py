@@ -1,6 +1,7 @@
 from sys import setrecursionlimit
 import re
 import os
+import shutil
 import copy
 import numpy as np
 import json
@@ -404,7 +405,8 @@ class PackDetailsSvgNest(RequestHandler):
             f.write(' "shapes": ' + shapes)
             f.write('}')
         os.system(f"java -cp packing/models/nest4J.jar UseCase.Main {path} {iterations} {rotations}")
-        self.write({'status': 'ok', 'filepath': 'files/res.svg'})
+        shutil.move('res.svg', 'packing/models/files/packing.svg')
+        self.write({'status': 'ok', 'filepath': 'files/packing.svg'})
 
     def load_shape(self, detail):
         points_np = detail.load_dxf_points()
