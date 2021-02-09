@@ -401,7 +401,9 @@ class PackDetailsSvgNest(RequestHandler):
         shapes = str(shapes).replace("'", '"')
         path = 'packing/models/files/tmp1.json'
         with open(path, 'w') as f:
-            f.write('{"container": { "width": '+str(params.material_width)+', "height": '+str(params.material_height)+' },')
+            w = int(params.material_width)
+            h = int(params.material_height)
+            f.write('{"container": { "width": '+str(w)+', "height": '+str(h)+' },')
             f.write(' "shapes": ' + shapes)
             f.write('}')
         os.system(f"java -cp packing/models/nest4J.jar UseCase.Main {path} {iterations} {rotations}")
@@ -439,7 +441,8 @@ class PackDetailsSvgNest(RequestHandler):
 
     def _translate_shape(self, shape, dx):
         for i, point in enumerate(shape['points']):
-            shape['points'][i]['x'] += dx
+            shape['points'][i]['x'] = float(shape['points'][i]['x'] + dx)
+            shape['points'][i]['y'] = float(shape['points'][i]['y'])
         return shape
 
 class PackDetailsNeural(RequestHandler):

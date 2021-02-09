@@ -10,7 +10,7 @@ sudo apt-get install tesseract-ocr tesseract-ocr-rus
 sudo apt-get install libsm6 libxrender1 libfontconfig1
 sudo apt-get install poppler-utils
 sudo apt-get install python3-pip
-
+sudo apt install openjdk-11-jdk # for svgNest
 ```
 
 Torch installation may be finished with MemoryError. Then

@@ -33,13 +33,13 @@ class Detail:
                 # load dxf
                 try:
                     contour = load_optimized_dxf(DXF_BASE_PATH + self.dxf_name)
-                    self.dxf_points = contour
                 except Exception as e:
                     errors.append('Cant load dxf. Error: ' + str(e))
         else:
             # load from json (faster)
             contour = load_optimized_json_dxf(JSON_BASE_PATH + json_name)
-            
+
+        self.dxf_points = contour
         return errors
         
     def load_dxf_points(self):
