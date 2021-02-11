@@ -78,5 +78,5 @@ def save_svgs(elements):
     archive_name = str(prefix) + archive_name
 
     _compress_pngs(archive_name)
-    return f'{FILE_FOLDER}{archive_name}'
+    return f'files/{archive_name}'
 
