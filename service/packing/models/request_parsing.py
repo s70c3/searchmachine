@@ -95,7 +95,7 @@ class DxfPackingParameters(PackingParametersBase):
                 if self._check_field(item, 'quantity', 'details -> #%d -> quantity' % idx) and \
                    self._check_field(item, 'dxf', 'detail -> #%d -> dxf' % idx):
                     q = int(item['quantity'])
-                    w = self._get_or_default(item, 'width', -1, 'details -> #%d -> width' % idx)
+                    w = self._get_or_default(item, 'width', 1, 'details -> #%d -> width' % idx)
                     h = self._get_or_default(item, 'height', 1, 'details -> #%d -> height' % idx)
                     dxf = item['dxf']
                     detail = Detail(w, h, q, idx, dxf)

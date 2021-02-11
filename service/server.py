@@ -5,8 +5,10 @@ import shutil
 import copy
 import numpy as np
 import json
+from statistics import mean
 from tornado.web import Application, RequestHandler, StaticFileHandler
 from tornado.ioloop import IOLoop
+import xml
 
 # techprocesses and ocr imports
 from text_recog import ocr
@@ -19,8 +21,10 @@ from service.feature_extractors import DetailData
 from service.request_validators import TablularDetailDataValidator, PDFValidator
 from service.parameters import SizeParameter, MassParameter, MaterialParameter, ThicknessParameter, DetailNameParameter
 # packing imports
+from packing.models.utils.save import save_svgs
 from packing.models.rect_packing_model.packing import pack_rectangular
 from packing.models.poly_packing import pack_polygonal
+from packing.models.svg_nest_packing.utils import packmap_from_etree_and_json
 # from packing.models.neural_packing import pack_neural
 from packing.models.request_parsing import RectPackingParameters, DxfPackingParameters
 from datetime import datetime as dt
@@ -386,14 +390,14 @@ class PackDetailsSvgNest(RequestHandler):
         # TODO add ids to shapes
         shapes = []
         idx = 1
-        for detail in params.details:
+        for type_id, detail in enumerate(params.details):
             shape = self.load_shape(detail)
-            shapes_objs = [shape] * detail.quantity
-            for i in range(len(shapes_objs)):
+            for i in range(detail.quantity):
                 shape_copy = copy.deepcopy(shape)
-                shape['id'] = idx + i
-                shapes.append(shape)
-            idx += len(shapes_objs)
+                shape_copy['id'] = idx + i
+                shape_copy['type_id'] = type_id
+                shapes.append(shape_copy)
+            idx += detail.quantity
 
 
         shapes = self.prepare_shapes(params.material_width, shapes)
@@ -408,7 +412,21 @@ class PackDetailsSvgNest(RequestHandler):
             f.write('}')
         os.system(f"java -cp packing/models/nest4J.jar UseCase.Main {path} {iterations} {rotations}")
         shutil.move('res.svg', 'packing/models/files/packing.svg')
-        self.write({'status': 'ok', 'filepath': 'files/packing.svg'})
+
+        svgs = self._divide_svg_per_packmaps('packing/models/files/packing.svg')
+        shapes_data = json.load(open(path))['shapes']
+        kims = []
+        ids_per_list = []
+        for svg in svgs:
+            packmap = packmap_from_etree_and_json(svg, shapes_data)
+            kims.append(round(packmap.get_kim(), 2))
+            ids_per_list.append(packmap.get_ids_per_list())
+        archive_path = save_svgs(svgs)
+        self.write({'results': {'materials': {'n': len(kims)},
+                                'kim': {'average': mean(kims),
+                                        'all': kims},
+                                'ids_per_list': ids_per_list},
+                    'filepath': archive_path})
 
     def load_shape(self, detail):
         points_np = detail.load_dxf_points()
@@ -427,6 +445,19 @@ class PackDetailsSvgNest(RequestHandler):
             curr_right_bound += width + 50
             ordered_shapes.append(shape)
         return ordered_shapes
+
+    def _divide_svg_per_packmaps(self, path):
+        """Returns n packmaps as a xml.dom.minidom objects"""
+        dom = xml.dom.minidom.parse(path)
+
+        gs = dom.childNodes[1].childNodes
+        is_g = lambda elem: 'Element: g at' in str(elem)
+        gs = list(filter(is_g, gs))
+        for i in range(len(gs)):
+            gs[i].setAttribute('transform', '(0, 0)')
+
+        return gs
+
 
     def _get_shape_xbounds(self, shape):
         minx = float('inf')

@@ -31,6 +31,10 @@ class Packmap:
             polygons += [extra_polygon]
         maxx = int(max([poly.bounds[2] for poly in polygons]))
         maxy = int(max([poly.bounds[3] for poly in polygons]))
+        if maxx < 10:
+            maxx = self.w
+        if maxy < 10:
+            maxy = self.h
         return maxx, maxy
     
     def render_packmap_with_poly(self, poly):
