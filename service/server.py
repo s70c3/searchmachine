@@ -14,6 +14,8 @@ import xml
 from text_recog import ocr
 from predict_norms.api import predict_operations_and_norms, predict_operations_and_norms_image_only
 from nomeclature_recognition.api import extract_nomenclature
+import dxf_parsing
+from packing.models.detail import DXF_BASE_PATH
 # price imports
 from service.models import PredictModel
 from service.logger import LoggerYellot
@@ -46,6 +48,7 @@ def make_app():
             ('/calc_detail', CalcDetailByTableHandler),
             ('/calc_detail_schema', CalcDetailBySchemaHandler),
             ('/get_params_by_schema', PredictParamsBySchemaHandler),
+            ('/get_dxf_sizes', DxfSizesHandler),
             ('/pack_details', PackDetailsRectangular),
             ('/pack_details_polygonal', PackDetailsPolygonal),
             ('/pack_details_neural', PackDetailsNeural),
@@ -53,6 +56,27 @@ def make_app():
             ('/files/(.*)', SendfileHandler, {'path': os.getcwd() + '/packing/models/files/'})]
     return Application(urls)
 
+
+class DxfSizesHandler(RequestHandler):
+    """Returns dxf width and height if dxf exists in local DB"""
+    def post(self):
+        params = json.loads(self.request.body.decode('utf-8'))
+        dxf_path = DXF_BASE_PATH + params['dxf']
+        if not dxf_parsing.exists(dxf_path):
+            self.set_status(404)
+            return self.write({'error': 'no such dxf file found'})
+        else:
+            dxf = dxf_parsing.load_optimized_dxf(dxf_path)
+            w, h = self._get_dxf_wh(dxf)
+            return self.write({'width': w,
+                               'height': h,
+                               'points': dxf.tolist()})
+
+    def _get_dxf_wh(self, points):
+        w = max(points[:, 0]) - min(points[:, 0])
+        h = max(points[:, 1]) - min(points[:, 1])
+        return w, h
+    
 
 class CalcDetailByTableHandler(RequestHandler):
     """

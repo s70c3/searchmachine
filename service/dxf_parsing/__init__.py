@@ -1,5 +1,6 @@
 import numpy as np
 import json
+import os
 from shapely.geometry import Polygon
 from .parsing import get_contour_from_dxf
 from . import compressing
@@ -33,3 +34,6 @@ def load_optimized_json_dxf(path):
     dxf = np.array(dxf)
     dxf = optimize_contour(dxf)
     return dxf
+
+def exists(dxf_path):
+    return os.path.exists(dxf_path)
