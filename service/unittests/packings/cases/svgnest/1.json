@@ -1,0 +1,93 @@
+{
+  "details": [
+    {
+      "height": 235.0,
+      "width": 235.0,
+      "quantity": 400,
+      "dxf": "4112.20.022.dxf"
+    },
+    {
+      "height": 93.0,
+      "width": 62.0,
+      "quantity": 135,
+      "dxf": "4447.38.00.651.dxf"
+    },
+    {
+      "height": 172.0,
+      "width": 80.0,
+      "quantity": 138,
+      "dxf": "4110.35.072.dxf"
+    },
+    {
+      "height": 60.0,
+      "width": 48.0,
+      "quantity": 120,
+      "dxf": "4498.36.20.032.dxf"
+    },
+    {
+      "height": 599.0,
+      "width": 310.0,
+      "quantity": 2,
+      "dxf": "4075.02.001.dxf"
+    },
+    {
+      "height": 599.0,
+      "width": 310.0,
+      "quantity": 3,
+      "dxf": "4075.02.002.dxf"
+    },
+    {
+      "height": 540.0,
+      "width": 70.0,
+      "quantity": 102,
+      "dxf": "302.30.00.141.dxf"
+    },
+    {
+      "height": 540.0,
+      "width": 70.0,
+      "quantity": 102,
+      "dxf": "302.30.00.143.dxf"
+    },
+    {
+      "height": 134.0,
+      "width": 48.0,
+      "quantity": 120,
+      "dxf": "4498.01.01.315.dxf"
+    },
+    {
+      "height": 216.0,
+      "width": 108.0,
+      "quantity": 65,
+      "dxf": "4095.08.076.dxf"
+    },
+    {
+      "height": 220.0,
+      "width": 118.0,
+      "quantity": 117,
+      "dxf": "4112.01.016.dxf"
+    },
+    {
+      "height": 232.0,
+      "width": 150.0,
+      "quantity": 108,
+      "dxf": "4112.01.104.dxf"
+    },
+    {
+      "height": 461.0,
+      "width": 276.0,
+      "quantity": 110,
+      "dxf": "4112.01.108.dxf"
+    },
+    {
+      "height": 461.0,
+      "width": 276.0,
+      "quantity": 111,
+      "dxf": "4112.01.109.dxf"
+    }
+  ],
+  "material": {
+    "height": 3000.0,
+    "width": 1500.0
+  },
+  "render_packing_maps": true
+}
