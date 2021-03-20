@@ -1,0 +1,37 @@
+{
+  "details": [
+    {
+      "dxf": "4440.27.01.001.dxf",
+      "quantity": 2
+    },
+    {
+      "dxf": "4458.25.16.641.dxf",
+      "quantity": 6
+    },
+    {
+      "dxf": "4472.40.80.736.dxf",
+      "quantity": 16
+    },
+    {
+      "dxf": "4498.25.13.427.dxf",
+      "quantity": 18
+    },
+    {
+      "dxf": "4514.25.02.153.dxf",
+      "quantity": 18
+    },
+    {
+      "dxf": "4498.25.13.105.dxf",
+      "quantity": 1
+    },
+    {
+      "dxf": "4447.20.85.004.dxf",
+      "quantity": 5
+    }
+  ],
+  "material": {
+    "width": 1500,
+    "height": 3000
+  },
+  "render_packing_maps": true
+}

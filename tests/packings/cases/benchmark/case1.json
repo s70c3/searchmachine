@@ -1,0 +1,21 @@
+{
+  "details": [
+    {
+      "dxf": "4497.70.23.009.DXF",
+      "quantity": 32
+    },
+    {
+      "dxf": "4484.02.05.028.dxf",
+      "quantity": 1
+    },
+    {
+      "dxf": "4472.16.17.001.dxf",
+      "quantity": 3
+    }
+  ],
+  "material": {
+    "width": 1200,
+    "height": 3000
+  },
+  "render_packing_maps": true
+}

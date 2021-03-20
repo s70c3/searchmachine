@@ -33,13 +33,10 @@ cp sevice/text_recog/tunedeng.traineddata /usr/share/tesseract-ocr/5/tessdata/
 
 ## Run
 
-Replace last string in server.py with your server ip and preferable port
-```
-app.run(debug=False, host='your_ip', port=your_port)
-```
 
 Run the server 
 ```
+cd service
 python3 server.py 
 ```
 

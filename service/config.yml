@@ -1,0 +1,9 @@
+static_folder: '/packing/models/files/'
+dxf_path: "/data/detail_price/dxf_хпц/dxf_ХПЦ_ТВЗ/"
+
+run:
+  models:
+    price: true
+    norms: true
+    operations: true
+    text_recog: true

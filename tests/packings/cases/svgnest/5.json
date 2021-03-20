@@ -1,0 +1,14 @@
+{
+  "details": [
+    {
+      "quantity": 200,
+      "dxf": "4483.37.00.043.dxf"
+    }
+  ],
+  "material": {
+    "width": 1500,
+    "height": 3000
+  },
+  "iterations": 10,
+  "rotations": 4
+}

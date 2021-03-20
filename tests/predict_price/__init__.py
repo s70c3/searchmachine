@@ -1,0 +1,1 @@
+from .test_tabular import PriceTabularOkTests, PriceTabularBadTests

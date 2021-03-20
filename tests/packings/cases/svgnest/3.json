@@ -1,0 +1,31 @@
+{
+  "details": [
+    {
+      "dxf": "Chu5.05.0701.03.dxf",
+      "quantity": 17
+    },
+    {
+      "dxf": "4110.01.049.dxf",
+      "quantity": 13
+    },
+    {
+      "dxf": "4112.00.025.dxf",
+      "quantity": 12
+    },
+    {
+      "dxf": "01.01.07.00.001.dxf",
+      "quantity": 16
+    },
+    {
+      "dxf": "TEM21.40.30.109.dxf",
+      "quantity": 10
+    }
+  ],
+  "material": {
+    "width": 1505,
+    "height": 3000
+  },
+  "render_packing_maps": true,
+  "iterations": 10,
+  "rotations": 4
+}

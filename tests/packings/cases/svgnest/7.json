@@ -1,0 +1,15 @@
+{
+  "details": [
+    {
+      "quantity": 107,
+      "dxf": "4112.10.005.dxf"
+    },
+    {
+      "quantity": 27,
+      "dxf": "4112.30.011.dxf"
+    }
+  ],
+ "material": {"width": 1505, "height": 3000},
+ "render_packing_maps": true,
+ "iterations": 1,
+ "rotations": 4}
