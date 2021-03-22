@@ -9,6 +9,8 @@ from yamlparams.utils import Hparam
 
 from http_utils import SendfileHandler
 from http_utils import DxfSizesHandler
+from http_utils import DxfSquareHandler
+from http_utils import DxfPointsHandler
 from http_utils import HelthHandler, TurnoffHandler
 from http_utils import CalcDetailByTableHandler, CalcDetailBySchemaHandler
 from http_utils import PredictParamsBySchemaHandler
@@ -25,18 +27,29 @@ from service.models.packing.hybrid_packing.packing import HybridPacker
 
 
 def make_app(config):
+    dxf_params = dict(loader=Loader(with_cache=True, base_path=config.dxf_path))
     urls = [
         ('/health', HelthHandler),
         ('/turnoff', TurnoffHandler),
         ('/calc_detail', CalcDetailByTableHandler, dict(model=price_model)),
         ('/calc_detail_schema', CalcDetailBySchemaHandler, dict(model=price_model)),
         ('/get_params_by_schema', PredictParamsBySchemaHandler),
-        ('/get_dxf_sizes', DxfSizesHandler, dict(loader=Loader(with_cache=True), base_path=config.dxf_path)),
+        
+        ('/get_dxf_sizes', DxfSizesHandler, dxf_params),
+        ('/dxf/sizes', DxfSizesHandler, dxf_params),
+        ('/dxf/square', DxfSquareHandler, dxf_params),
+        ('/dxf/points', DxfPointsHandler, dxf_params),
+        
         ('/pack_details', PackRectangular, dict(packing_f=pack_rectangular)),
         ('/pack_details_hybrid', PackHybrid, dict(packing_f=HybridPacker())),
+        ('/pack_details_svgnest', PackSvgNest, dict(packing_f=SvgNestPacker())),
+        ('/pack/rectangular', PackRectangular, dict(packing_f=pack_rectangular)),
+        ('/pack/hybrid', PackHybrid, dict(packing_f=HybridPacker())),
+        ('/pack/svgnest', PackSvgNest, dict(packing_f=SvgNestPacker())),
+        
         # ('/pack_details_polygonal', PackDetailsPolygonal),
         # ('/pack_details_neural', PackDetailsNeural),
-        ('/pack_details_svgnest', PackSvgNest, dict(packing_f=SvgNestPacker())),
+        
         ('/files/(.*)', SendfileHandler, {'path': os.getcwd() + config.static_folder})
     ]
     return Application(urls)
