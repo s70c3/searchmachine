@@ -122,7 +122,8 @@ class CalcDetailBySchemaHandler(CalcDetailHandlerBase):
         parse_errors = pdf_validator.get_parse_errors(self)
         if len(parse_errors):
             self.set_status(422)
-            return self.write({'parse_error': 'Cant decode pdf. Maybe its not a pdf file or broken pdf'})
+            return self.write({'parse_error': 'Cant decode pdf. Maybe its not a pdf file or broken pdf',
+                               'description': parse_errors})
 
         # make features
         img = pdf_validator.get_image()
