@@ -10,19 +10,18 @@ schemes:
 
 
 tags:
-- name: "calc_detail"
-- name: "calc_detail_schema"
-- name: "pack_details"
+- name: "price"
+- name: "dxf"
+- name: "pack"
 - name: "files"
 - name: "health"
-- name: "get_params_by_schema"
 
 
 paths:
   /calc_detail:
     post:
       tags:
-      - "calc_detail"
+      - "price"
       description: "Calculates detail price. Based on tabular detail data"
       consumes:
       - "application/json"
@@ -50,11 +49,11 @@ paths:
           description: "ok"
           schema:
             $ref: "#/definitions/PricePredictionResponce"
-            
+
   /calc_detail_schema:
     post:
       tags:
-      - "calc_detail_schema"
+      - "price"
       description: "Calculates detail price and techprocesses with pdf schema. Techprocesses predicts by detail parameters and/or pdf schema. Techprocesses may be an empty array"
       consumes:
       - "application/json"
@@ -100,7 +99,7 @@ paths:
   /get_params_by_schema:
     post:
       tags:
-      - "get_params_by_schema"
+      - "price"
       description: "Calculates detail parameters based on given parameters and pdf schema. Use for calculating and/or validating parameters for /calc_detail_schema and etc. Validation applied automatically, null returned if prediction is invalid"
       consumes:
       - "application/json"
@@ -124,7 +123,6 @@ paths:
             $ref: "#/definitions/ParamsBySchemaResponce"
 
 
-
   /health:
     get:
       tags:
@@ -143,6 +141,229 @@ paths:
               status:
                 type: "string"
                 default: "working"
+
+
+  /dxf/sizes:
+    get:
+      tags:
+      - "dxf"
+      consumes:
+      - "application/json"
+      parameters:
+      - name: "dxf"
+        required: true
+        in: "query"
+        type: "string"
+        description: "Name of dxf file"
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            type: "object"
+            properties:
+              w:
+                type: "number"
+              h:
+                type: "number"
+
+  /get_dxf_sizes:
+    get:
+      deprecated: true
+      tags:
+      - "dxf"
+      consumes:
+      - "application/json"
+      parameters:
+      - name: "dxf"
+        required: true
+        in: "query"
+        type: "string"
+        description: "Name of dxf file"
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            type: "object"
+            properties:
+              w:
+                type: "number"
+              h:
+                type: "number"
+
+  /dxf/square:
+    get:
+      tags:
+      - "dxf"
+      consumes:
+      - "application/json"
+      parameters:
+      - name: "dxf"
+        required: true
+        in: "query"
+        type: "string"
+        description: "Name of dxf file"
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            type: "object"
+            properties:
+              square:
+                type: "number"
+
+  /dxf/points:
+    get:
+      tags:
+      - "dxf"
+      consumes:
+      - "application/json"
+      parameters:
+      - name: "dxf"
+        required: true
+        in: "query"
+        type: "string"
+        description: "Name of dxf file"
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            type: "object"
+            properties:
+              points:
+                type: "array"
+                items:
+                  type: "array"
+                  description: "Points"
+                  items:
+                    type: "number"
+                    description: "Point coordinate"
+
+
+  /pack_details:
+    post:
+      deprecated: true
+      tags:
+        - "pack"
+      description: "Packs details with rectangular packing algorithm"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "details"
+        in: "body"
+        schema:
+          $ref: "#/pack/RectRequestSchema"
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            $ref: "#/pack/Schema"
+
+  /pack/rectangular:
+    post:
+      tags:
+        - "pack"
+      description: "Packs details with rectangular packing algorithm"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "details"
+        in: "body"
+        schema:
+          $ref: "#/pack/RectRequestSchema"
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            $ref: "#/pack/Schema"
+
+  /pack_details_svgnest:
+    post:
+      deprecated: true
+      tags:
+        - "pack"
+      description: "Packs details with svgnest packing algorithm"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "details"
+        in: "body"
+        schema:
+          $ref: "#/pack/DxfRequestSchema"
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            $ref: "#/pack/Schema"
+
+  /pack/svgnest:
+    post:
+      tags:
+        - "pack"
+      description: "Packs details with svgnest packing algorithm"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "details"
+        in: "body"
+        schema:
+          $ref: "#/pack/DxfRequestSchema"
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            $ref: "#/pack/Schema"
+
+  /pack_details_hybrid:
+    post:
+      deprecated: true
+      tags:
+        - "pack"
+      description: "Packs details with svgnest+rectangular packing algorithm"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "details"
+        in: "body"
+        schema:
+          $ref: "#/pack/DxfRequestSchema"
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            $ref: "#/pack/Schema"
+
+  /pack/hybrid:
+    post:
+      tags:
+        - "pack"
+      description: "Packs details with svgnest+rectangular packing algorithm"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "details"
+        in: "body"
+        schema:
+          $ref: "#/pack/DxfRequestSchema"
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            $ref: "#/pack/Schema"
+
+
+
 
 definitions:
   PricePredictionResponce:
@@ -229,3 +450,97 @@ definitions:
         type: "string"
       meterial_thickness_by_given_material:
         type: "string"
+
+pack:
+  RectRequestSchema:
+    type: "object"
+    properties:
+      details:
+        type: "array"
+        items:
+          type: "object"
+          properties:
+            width:
+              type: "number"
+            height:
+              type: "number"
+            quantity:
+              type: "integer"
+            dxf:
+              type: "string"
+              required: false
+      material:
+        type: "object"
+        properties:
+          width:
+            type: "number"
+          height:
+            type: "number"
+      render_packing_maps:
+        type: "boolean"
+
+  DxfRequestSchema:
+    type: "object"
+    properties:
+      details:
+        type: "array"
+        items:
+          type: "object"
+          properties:
+            quantity:
+              type: "integer"
+            dxf:
+              type: "string"
+              required: true
+      material:
+        type: "object"
+        properties:
+          width:
+            type: "number"
+          height:
+            type: "number"
+      render_packing_maps:
+        type: "boolean"
+      iterations:
+        type: "integer"
+        description: "number of iterations for packing genetic algorithm"
+      rotations:
+        type: "integer"
+        description: "number of rotations for details. Degrees of rotation will be 360/N. For N=2 it will be 360/1, 360/2"
+
+  Schema:
+    type: "object"
+    properties:
+      errors:
+        type: "array"
+        items:
+          type: "string"
+      additional:
+        type: "object"
+      results:
+        type: "object"
+        properties:
+          materials:
+            type: "object"
+            properties:
+              n:
+                type: "number"
+          kim:
+            type: "object"
+            properties:
+              average:
+                type: "number"
+              all:
+                type: "array"
+                items:
+                  type: "number"
+          ids_per_list:
+            type: "array"
+            items:
+              type: "object"
+      renders:
+        type: "string"
+        description: "path to archive with packing images"
+
+
+
