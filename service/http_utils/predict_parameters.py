@@ -25,6 +25,6 @@ class PredictParamsBySchemaHandler(RequestHandler):
         params = {'mass': prediction['mass'],
                   'material': prediction['material'],
                   'material_thickness_by_img': ThicknessModel.predict(prediction['material']),
-                  'meterial_thickness_by_given_material': ThicknessModel.predict(given_material)}
+                  'material_thickness_by_given_material': ThicknessModel.predict(given_material)}
 
         return self.write(params)
