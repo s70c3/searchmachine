@@ -1,3 +1,4 @@
+import re
 from typeguard import check_argument_types
 from service.models.base import BaseModel
 
