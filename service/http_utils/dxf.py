@@ -20,6 +20,7 @@ class AbstractDxfHandler(RequestHandler):
         except Exception as e:
             info['error_description'] = 'undefined error.' + str(e)
             info['error_code'] = 500
+            raise e
 
         return info
 
@@ -27,7 +28,7 @@ class AbstractDxfHandler(RequestHandler):
 class DxfSizesHandler(AbstractDxfHandler):
     """Returns dxf width and height if dxf exists in local DB. Throws file errors"""
 
-    @use_args({'dxf': fields.Str(required=True)}, location='json')
+    @use_args({'dxf': fields.Str(required=True)}, location='querystring')
     def get(self, reqargs):
         res = super().get(reqargs, self.loader.get_sizes)
         if res['error_code'] is not None:
@@ -40,7 +41,7 @@ class DxfSizesHandler(AbstractDxfHandler):
 
 class DxfSquareHandler(AbstractDxfHandler):
 
-    @use_args({'dxf': fields.Str(required=True)}, location='json')
+    @use_args({'dxf': fields.Str(required=True)}, location='querystring')
     def get(self, reqargs):
         res = super().get(reqargs, self.loader.get_square)
         if res['error_code'] is not None:
@@ -52,7 +53,7 @@ class DxfSquareHandler(AbstractDxfHandler):
 
 class DxfPointsHandler(AbstractDxfHandler):
 
-    @use_args({'dxf': fields.Str(required=True)}, location='json')
+    @use_args({'dxf': fields.Str(required=True)}, location='querystring')
     def get(self, reqargs):
         res = super().get(reqargs, self.loader.get_points)
         if res['error_code'] is not None:
