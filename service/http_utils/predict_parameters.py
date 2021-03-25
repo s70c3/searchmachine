@@ -1,3 +1,5 @@
+import numpy as np
+from PIL import Image
 from tornado.web import RequestHandler
 from service.models.predict_thickness.model import ThicknessModel
 from service.models.text_recog.model import LinearSizesModel
@@ -15,12 +17,14 @@ class PredictParamsBySchemaHandler(RequestHandler):
             self.write({'parse_error': 'Cant decode pdf. Maybe its not a pdf file or broken pdf'})
             return
         img = pdf_validator.get_image()
+        img = np.array(img.convert('L'))
         given_material = self.get_argument('material', None)
 
-        pred_mass, pred_material = NomenclatureModel.predict(img)
-        params = {'mass': pred_mass,
-                  'material': pred_material,
-                  'material_thickness_by_img': ThicknessModel.predict(pred_material),
+        prediction = NomenclatureModel.predict(img)
+
+        params = {'mass': prediction['mass'],
+                  'material': prediction['material'],
+                  'material_thickness_by_img': ThicknessModel.predict(prediction['material']),
                   'meterial_thickness_by_given_material': ThicknessModel.predict(given_material)}
 
         return self.write(params)
