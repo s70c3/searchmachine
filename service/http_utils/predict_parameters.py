@@ -14,7 +14,8 @@ class PredictParamsBySchemaHandler(RequestHandler):
         pdf_validator = PDFValidator()
         parse_errors = pdf_validator.get_parse_errors(self)
         if len(parse_errors):
-            self.write({'parse_error': 'Cant decode pdf. Maybe its not a pdf file or broken pdf'})
+            self.write({'parse_error': 'Cant decode pdf. Maybe its not a pdf file or broken pdf',
+                        'description': parse_errors})
             return
         img = pdf_validator.get_image()
         img = np.array(img.convert('L'))

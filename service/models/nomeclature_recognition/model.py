@@ -30,7 +30,8 @@ class NomenclatureModel(BaseModel):
 
     @staticmethod
     def predict(img: np.array) -> dict:
-        assert check_argument_types()
+        assert isinstance(img, np.ndarray)
+        assert img.ndim == 2
 
         prediction = extract_nomenclature(img)
         prediction['mass'] = NomenclatureModel._validate_mass(prediction['mass'])
