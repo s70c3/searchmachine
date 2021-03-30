@@ -115,7 +115,6 @@ class CalcDetailBySchemaHandler(CalcDetailHandlerBase):
 
     @use_args(schema, location='querystring')
     def post(self, reqargs):
-        print(self.schema)
         print(reqargs)
         # parse pdf
         pdf_validator = PDFValidator()
