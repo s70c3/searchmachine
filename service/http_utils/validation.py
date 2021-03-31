@@ -54,6 +54,7 @@ class PDFValidator:
 
     def get_parse_errors(self, request):
         # check if link exists and file exists
+        self._errors = []
         link = request.get_argument('pdf_link')
         file = self._download(link)
         if len(self._errors):
