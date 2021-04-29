@@ -23,7 +23,9 @@ class PredictParamsBySchemaHandler(RequestHandler):
 
         prediction = NomenclatureModel.predict(img)
 
-        params = {'mass': prediction['mass'],
+        params = {'detail': prediction['detail'],
+                  'name': prediction['name'],
+                  'mass': prediction['mass'],
                   'material': prediction['material'],
                   'material_thickness_by_img': ThicknessModel.predict(prediction['material']),
                   'material_thickness_by_given_material': ThicknessModel.predict(given_material)}

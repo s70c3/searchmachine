@@ -104,17 +104,22 @@ class CellExtractor:
         candidates = list(filter(criterion, bboxes))
         if len(candidates) == 1: return candidates[0]
         else: return None
-    
-    def get_materical_cell(self):
+
+    def get_material_name_detail_cells(self):
         bboxes = self._get_cells()
-        
+
         # get lowest cells
         max_low = max([bbox.y1 for bbox in bboxes])
         lowest_cells = list(filter(lambda x: self._equiv(x.y1, max_low), bboxes))
 
         lowest_cells_left_to_right = sorted(lowest_cells, key=lambda x: x.x1)
         material_bbox = lowest_cells_left_to_right[-2]
-        return material_bbox
+
+        aligned = list(filter(lambda b: abs(b.x0 - material_bbox.x0) < self.consts.SAME_LINES_DIFF, bboxes))
+        aligned = sorted(aligned, key=lambda b: b.y0)
+        name_bbox, detail_bbox, material_bbox = aligned
+
+        return name_bbox, detail_bbox, material_bbox
     
     def _get_rightest_cell(self, nrow, bboxes):
         # counting from bottom, starting at 0

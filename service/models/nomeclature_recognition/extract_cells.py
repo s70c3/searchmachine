@@ -15,14 +15,10 @@ def get_cell_imgs(img):
 
     mass_bbox = cell_extractor.get_mass_cell()
     mass_header_bbox = cell_extractor.get_mass_header_cell()
-    material_bbox = cell_extractor.get_materical_cell()
+    name_bbox, detail_bbox, material_bbox = cell_extractor.get_material_name_detail_cells()
+    bboxes = [mass_bbox, mass_header_bbox, name_bbox, detail_bbox, material_bbox]
 
-    mass_combined_bbox = extract_table.combine_bboxes(combined_bbox, mass_bbox)
-    mass_header_combined_bbox = extract_table.combine_bboxes(combined_bbox, mass_header_bbox)
-    material_combined_bbox = extract_table.combine_bboxes(combined_bbox, material_bbox)
-
-    mass_subimg = extract_table.get_subimg(img, mass_combined_bbox)
-    mass_header_subimg = extract_table.get_subimg(img, mass_header_combined_bbox)
-    material_subimg = extract_table.get_subimg(img, material_combined_bbox)
-    
-    return mass_subimg, mass_header_subimg, material_subimg
+    combined_bboxes = [extract_table.combine_bboxes(combined_bbox, b) for b in bboxes]
+    subimgs = [extract_table.get_subimg(img, b) for b in combined_bboxes]
+    mass_subimg, mass_header_subimg, name_subimg, detail_subimg, material_subimg = subimgs
+    return mass_subimg, mass_header_subimg, name_subimg, detail_subimg, material_subimg

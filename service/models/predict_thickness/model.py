@@ -1,4 +1,6 @@
 import re
+from typing import Optional
+
 from typeguard import check_argument_types
 from service.models.base import BaseModel
 
@@ -62,7 +64,7 @@ class ThicknessModel(BaseModel):
         return None
 
     @staticmethod
-    def predict(material_string: str) -> float or None:
+    def predict(material_string: Optional[str]) -> float or None:
         assert check_argument_types()
 
         if material_string is None:
