@@ -11,7 +11,8 @@ def _check_lang(lang, tool):
         if l not in tool.get_available_languages():
             raise Exception(f'Language {l} not installed in tesseract')
 
-def parse_words_with_location(img, lang, psm, oem=None):
+
+def parse_words_with_location(img, lang, psm, oem=None, only_digits=False):
     tool = pyocr.get_available_tools()[0]
     _check_lang(lang, tool)
     img = u.gray2rgb(img)
@@ -21,11 +22,14 @@ def parse_words_with_location(img, lang, psm, oem=None):
     flags = ['--psm', str(psm)]
     if oem is not None:
         flags += ['--oem', str(oem)]
+    if only_digits:
+        flags += ['nobatch', 'digits']
     builder.tesseract_flags = flags
     word_boxes = tool.image_to_string(img, lang=lang, builder=builder)
     return word_boxes
 
-def parse_word(img, lang, psm=8, oem=None):
-    word_boxes = parse_words_with_location(img, lang, psm, oem)
+
+def parse_word(img, lang, psm=8, oem=None, only_digits=False):
+    word_boxes = parse_words_with_location(img, lang, psm, oem, only_digits)
     text = [wb.content for wb in word_boxes]
     return "|".join(text)

@@ -1,5 +1,6 @@
 from math import exp, trunc
 import numpy as np
+from pathlib import Path
 from service.models.base import CbClassifier, CbRegressor
 
 WEIGHTS_PATH = 'models/predict_price/weights/'

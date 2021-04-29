@@ -7,3 +7,4 @@ run:
     norms: true
     operations: true
     text_recog: true
+    nomenclature: true

@@ -441,6 +441,9 @@ definitions:
   ParamsBySchemaResponce:
     type: "object"
     properties:
+      detail:
+        type: "string"
+        description: "Predicted detail name"
       mass:
         type: "number"
         description: "Predicted mass"
@@ -450,6 +453,9 @@ definitions:
         type: "string"
       meterial_thickness_by_given_material:
         type: "string"
+      name:
+        type: "string"
+        description: "Predicted drawing name"
 
   # pack
   RectRequestSchema:
