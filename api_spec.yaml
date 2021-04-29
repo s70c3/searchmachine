@@ -253,12 +253,12 @@ paths:
       - name: "details"
         in: "body"
         schema:
-          $ref: "#/pack/RectRequestSchema"
+          $ref: "#/definitions/RectRequestSchema"
       responses:
         "200":
           description: "ok"
           schema:
-            $ref: "#/pack/Schema"
+            $ref: "#/definitions/Schema"
 
   /pack/rectangular:
     post:
@@ -273,12 +273,12 @@ paths:
       - name: "details"
         in: "body"
         schema:
-          $ref: "#/pack/RectRequestSchema"
+          $ref: "#/definitions/RectRequestSchema"
       responses:
         "200":
           description: "ok"
           schema:
-            $ref: "#/pack/Schema"
+            $ref: "#/definitions/Schema"
 
   /pack_details_svgnest:
     post:
@@ -294,12 +294,12 @@ paths:
       - name: "details"
         in: "body"
         schema:
-          $ref: "#/pack/DxfRequestSchema"
+          $ref: "#/definitions/DxfRequestSchema"
       responses:
         "200":
           description: "ok"
           schema:
-            $ref: "#/pack/Schema"
+            $ref: "#/definitions/Schema"
 
   /pack/svgnest:
     post:
@@ -314,12 +314,12 @@ paths:
       - name: "details"
         in: "body"
         schema:
-          $ref: "#/pack/DxfRequestSchema"
+          $ref: "#/definitions/DxfRequestSchema"
       responses:
         "200":
           description: "ok"
           schema:
-            $ref: "#/pack/Schema"
+            $ref: "#/definitions/Schema"
 
   /pack_details_hybrid:
     post:
@@ -335,12 +335,12 @@ paths:
       - name: "details"
         in: "body"
         schema:
-          $ref: "#/pack/DxfRequestSchema"
+          $ref: "#/definitions/DxfRequestSchema"
       responses:
         "200":
           description: "ok"
           schema:
-            $ref: "#/pack/Schema"
+            $ref: "#/definitions/Schema"
 
   /pack/hybrid:
     post:
@@ -355,12 +355,12 @@ paths:
       - name: "details"
         in: "body"
         schema:
-          $ref: "#/pack/DxfRequestSchema"
+          $ref: "#/definitions/DxfRequestSchema"
       responses:
         "200":
           description: "ok"
           schema:
-            $ref: "#/pack/Schema"
+            $ref: "#/definitions/Schema"
 
 
 
@@ -451,34 +451,33 @@ definitions:
       meterial_thickness_by_given_material:
         type: "string"
 
-pack:
+  # pack
   RectRequestSchema:
-    type: "object"
-    properties:
-      details:
-        type: "array"
-        items:
+      type: "object"
+      properties:
+        details:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              width:
+                type: "number"
+              height:
+                type: "number"
+              quantity:
+                type: "integer"
+              dxf:
+                type: "string"
+                required: false
+        material:
           type: "object"
           properties:
             width:
               type: "number"
             height:
               type: "number"
-            quantity:
-              type: "integer"
-            dxf:
-              type: "string"
-              required: false
-      material:
-        type: "object"
-        properties:
-          width:
-            type: "number"
-          height:
-            type: "number"
-      render_packing_maps:
-        type: "boolean"
-
+        render_packing_maps:
+          type: "boolean"
   DxfRequestSchema:
     type: "object"
     properties:
@@ -541,6 +540,5 @@ pack:
       renders:
         type: "string"
         description: "path to archive with packing images"
-
 
 
