@@ -2,6 +2,7 @@ from math import log1p, sqrt, log
 from tornado.web import RequestHandler
 from webargs import fields
 from webargs.tornadoparser import use_args
+import numpy as np
 
 from service.models.text_recog.model import LinearSizesModel
 from service.http_utils.validation import DetailValidator
@@ -94,7 +95,7 @@ class CalcDetailBySchemaHandler(CalcDetailHandlerBase):
     def _predict_ops_and_norms(self, pdf_img, material, mass, thickness, length, width):
         ops_norms = predict_operations_and_norms(pdf_img, material, mass, thickness, length, width)
         result, error = ops_norms.result, ops_norms.error
-        if len(error) > 0:
+        if error is not None:
             return None, error
         return result, None
 
@@ -138,6 +139,7 @@ class CalcDetailBySchemaHandler(CalcDetailHandlerBase):
         price = self.model.predict(features, linsizes)
 
         # predict techprocesses
+        img = np.array(img.convert('L'))
         ops_objects = self._predict_techprocesses([size_x, size_y, size_z], mass, detail_name, thickness, img)
 
         info = self._create_response(price, ops_objects)
