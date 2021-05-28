@@ -14,6 +14,7 @@ DILATION_SIZE = 2
 EROSION_SIZE = 2
 LINEAR_MIN = 10
 LINEAR_MAX = 5000
+PSM = 11
 __all__ = ['extract_sizes']
 
 
@@ -94,14 +95,14 @@ class MyBuilder(pyocr.builders.WordBoxBuilder):
                                   "tessedit_char_whitelist=0123456789Ø+*,.=x±RhHSmbKPT()"] + self.tesseract_configs
 
 
-def ocr(img, psm=11):
+def ocr(img):
     img = erode(np.uint8(img), kernel=2)
     img = np.uint8(img)
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
 
     img = cv2pil(img)
     builder = MyBuilder()
-    builder.tesseract_flags = ['--psm', str(psm)]
+    builder.tesseract_flags = ['--psm', str(PSM)]
     word_boxes = tool.image_to_string(
         img,
         lang="tunedeng",
@@ -119,9 +120,9 @@ def ocr(img, psm=11):
     return polys_np, labels
 
 
-def rotated_ocr(img, angle, psm=11):
+def rotated_ocr(img, angle):
     img = img.rotate(angle, expand=True)
-    polys_np, labels = ocr(img, psm)
+    polys_np, labels = ocr(img, PSM)
     return labels
 
 
@@ -138,18 +139,18 @@ def show(path):
     return Image.fromarray(img)
 
 
-def recorgnize(img, psm=11):
+def recorgnize(img):
     polys_np, rec_scores = [], []
     labels = {-90: [], 0: []}
     for i, angle in enumerate([0, -90]):
-        labels0 = rotated_ocr(img, angle, psm)  # , builder=builder)
+        labels0 = rotated_ocr(img, angle, PSM)  # , builder=builder)
         labels[angle].extend(labels0)
     return labels
 
-def process(img, psm=11):
+def process(img):
     img = process_for_getting_only_text(img)
     img = Image.fromarray(img)
-    labels = recorgnize(img, psm)
+    labels = recorgnize(img, PSM)
     return labels
 
 

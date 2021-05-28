@@ -5,11 +5,12 @@ import pyocr.builders
 from .predict_utils import *
 
 
+
 def _check_lang(lang, tool):
     langs = lang.split('+')
     for l in langs:
         if l not in tool.get_available_languages():
-            raise Exception(f'Language {l} not installed in tesseract')
+            raise Exception(f'Language {l} not installed in tesseract. Available languages: {tool.get_available_languages()}')
 
 
 def parse_words_with_location(img, lang, psm, oem=None, only_digits=False):

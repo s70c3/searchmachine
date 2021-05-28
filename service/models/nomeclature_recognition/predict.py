@@ -4,9 +4,10 @@ from .predict_material import *
 import difflib
 import pickle
 from yamlparams.utils import Hparam
+import os
 
 def _read_list_of_detail_names():
-    with open('models/nomeclature_recognition/files/det_joined.pkl', 'rb') as f:
+    with open(f'{os.path.dirname(__file__)}/files/det_joined.pkl', 'rb') as f:
         return pickle.load(f)
 
 
@@ -48,10 +49,10 @@ def predict_material(cell_img):
         material = None
     return material
 
-config = Hparam('./config.yml')
+# config = Hparam('./config.yml')
 
-if config.run.models.nomenclature:
-    #################
-    ## read models ##
-    #################
-    _details = _read_list_of_detail_names()
+# if config.run.models.nomenclature:
+#     #################
+#     ## read models ##
+#     #################
+_details = _read_list_of_detail_names()
