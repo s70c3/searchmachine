@@ -175,20 +175,22 @@ def get_lower_image(contour_img, consts:ImageConstants)->Bbox:
 
     return Bbox(0, int(lower_lines[-1][0][0] - consts.BORDER_EPSILON), W, H)
 
-def get_table(contour_lower_img, consts)->Bbox:
-    t_vh = contour_lower_img.copy()
+def _get_lines(img):
     minLineLength = 100
     maxLineGap = 10
 
     #  Probabilistic Hough Line Transform
-    lines = cv2.HoughLinesP(t_vh, 1, np.pi / 180, 200, None, minLineLength, maxLineGap)
+    lines = cv2.HoughLinesP(img, 1, np.pi / 180, 200, None, minLineLength, maxLineGap)
     lines = [create_line_from_HoughP(l) for l in lines]
 
-    hlines = list(filter(lambda x: x.is_horizontal(), lines))
-    vlines = list(filter(lambda x: x.is_vertical(), lines))
+    # select vlines & hlines
+    hlines = sorted(filter(lambda x: x.is_horizontal(), lines), key=lambda x:x.mean_y())
+    vlines = sorted(filter(lambda x: x.is_vertical(), lines), key=lambda x:x.mean_x())
+    return hlines, vlines
 
-    hlines = sorted(hlines, key=lambda x:x.mean_y())
-    vlines = sorted(vlines, key=lambda x:x.mean_x())
+def _get_table_old(contour_lower_img, consts)->Bbox:
+    t_vh = contour_lower_img.copy()
+    hlines, vlines = _get_lines(t_vh)
 
     top_line = hlines[0]
     top_lines = [l for l in hlines if np.abs(l.mean_y() - top_line.mean_y()) < consts.SAME_LINES_DIFF]
@@ -206,3 +208,25 @@ def get_table(contour_lower_img, consts)->Bbox:
     eps = consts.SAME_LINES_DIFF
     table_bbox = Bbox(min_left_x-eps, min_up-eps, max_right_x+eps, max_down+eps)
     return table_bbox
+
+def _get_first_approx_bbox(lower_img, consts):
+    '''Cuts lower right corner of  wide drawings'''
+    
+    t_vh = lower_img.copy()
+    H,W = t_vh.shape
+    hlines, vlines = _get_lines(t_vh)
+    
+    # find lower and left bounds of table
+    bottom_y = max([max(l.y1, l.y2) for l in hlines])
+    left_x = W - int(3.3 * bottom_y)
+    
+    # return bbox
+    eps = consts.SAME_LINES_DIFF
+    return Bbox(max(0,left_x-eps), 0, W, min(H,bottom_y+eps))
+
+def get_table(lower_img, consts)->Bbox:
+    first_approx_bbox = _get_first_approx_bbox(lower_img, consts)
+    first_approx_img = get_subimg(lower_img, first_approx_bbox)
+    table_bbox = _get_table_old(first_approx_img, consts)
+    combined_bbox = combine_bboxes(mbbox=first_approx_bbox, rbbox=table_bbox)
+    return combined_bbox
