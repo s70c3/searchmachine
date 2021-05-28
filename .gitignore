@@ -13,3 +13,4 @@ __pycache__/
 *.pkl
 *.pt
 .gitkeep
+/service/models/predict_norms/files/
