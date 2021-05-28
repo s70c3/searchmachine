@@ -2,54 +2,10 @@ import cv2
 import numpy as np
 from . import utils as u
 import math
-from dataclasses import dataclass
-from .bbox import Bbox
+from .bbox import Bbox, get_subimg, combine_bboxes
+from .line import Line, create_line_from_HoughP
 
-@dataclass
-class Line:
-    x1:int
-    y1:int
-    x2:int
-    y2:int
-        
-    def mean_y(self): return (self.y1 + self.y2) / 2
-    def mean_x(self): return (self.x1 + self.x2) / 2
-    def min_x(self): return min(self.x1, self.x2)
-    def max_x(self): return max(self.x1, self.x2)
-    def min_y(self): return min(self.y1, self.y2)
-    def max_y(self): return max(self.y1, self.y2)
-    def _spread_y(self): return np.abs(self.y2-self.y1)
-    def _spread_x(self): return np.abs(self.x2-self.x1)
-    def is_horizontal(self): return self._spread_y() < self._spread_x()/2
-    def is_vertical(self): return self._spread_x() < self._spread_y()/2
-    def __str__(self): return f"({self.x1}, {self.y1}), ({self.x2}, {self.y2})"
-    def __repr__(self): return str(self)
-    
-def create_line_from_HoughP(line):
-    x1, y1, x2, y2 = line[0]
-    return Line(x1, y1, x2, y2)
-    
-    
-def show_lines(img, lines, window_mode=cv2.WINDOW_NORMAL):
-    i = 0
-    while True:
-        line = lines[i]
-        x1,y1,x2,y2 = line.x1,line.y1,line.x2,line.y2
-        cdst = u.gray2rgb(img.copy())
-        cdst = cv2.line(cdst,(x1,y1),(x2,y2),(0,255,0),2)
-        cv2.namedWindow(str(i), window_mode)
-        cv2.imshow(str(i), cdst)
-        key = cv2.waitKey(0)
-        cv2.destroyAllWindows()
-        if key == 81:
-            if i > 0: i-= 1
-            continue
-        elif key == 83:
-            if i < len(lines)-1: i += 1
-            continue
-        else:
-            break
-            
+
 class ImageConstants:
     def __init__(self, img):
         self.img = img
@@ -63,86 +19,10 @@ class ImageConstants:
     def equivalent(self, value1, value2): return self.almost_0(value1-value2)
 
 
-def get_bbox(contour):
-    bbox = cv2.boundingRect(contour)
-    x0,y0,w,h = bbox
-    return Bbox(x0, y0, x0+w, y0 + h)
-
-def get_subimg(img, bbox:Bbox):
-    return img[bbox.y0:bbox.y1, bbox.x0:bbox.x1]
-
-def combine_bboxes(mbbox, rbbox):
-    # mbbox in main bbox
-    # rbbox is relative to mbbox
-    x0, y0 = mbbox.x0, mbbox.y0
-    return Bbox(x0+rbbox.x0, y0+rbbox.y0, x0+rbbox.x1, y0+rbbox.y1)
-
-
-class CellExtractor:
-    def __init__(self, table, consts):
-        self.table = table
-        self.consts = consts
-        
-    def _almost_0(self, v): return self.consts.almost_0(v)
-    def _equiv(self, v1, v2): return self.consts.equivalent(v1, v2)
-        
-    def _get_cells(self):
-        contours, hierarchy = cv2.findContours(self.table, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        bboxes = list(map(get_bbox, contours))
-        # filter out too large and lines
-        H, W = self.table.shape
-        table_area = H * W
-        is_too_large = lambda x: x.area() > table_area / 2
-        is_a_line = lambda x: self._almost_0(x.width()) or self._almost_0(x.height())
-        is_a_cell = lambda x: not is_too_large(x) and not is_a_line(x)
-        bboxes = list(filter(is_a_cell, bboxes))
-        return bboxes
-    
-    def _get_left_neighbour(self, cell, bboxes):
-        x0, y1 = cell.x0, cell.y1
-        criterion = lambda x: self._equiv(x.x1, x0) and self._equiv(x.y1, y1)
-        candidates = list(filter(criterion, bboxes))
-        if len(candidates) == 1: return candidates[0]
-        else: return None
-
-    def get_material_name_detail_cells(self):
-        bboxes = self._get_cells()
-
-        # get lowest cells
-        max_low = max([bbox.y1 for bbox in bboxes])
-        lowest_cells = list(filter(lambda x: self._equiv(x.y1, max_low), bboxes))
-
-        lowest_cells_left_to_right = sorted(lowest_cells, key=lambda x: x.x1)
-        material_bbox = lowest_cells_left_to_right[-2]
-
-        aligned = list(filter(lambda b: abs(b.x0 - material_bbox.x0) < self.consts.SAME_LINES_DIFF, bboxes))
-        aligned = sorted(aligned, key=lambda b: b.y0)
-        name_bbox, detail_bbox, material_bbox = aligned
-
-        return name_bbox, detail_bbox, material_bbox
-    
-    def _get_rightest_cell(self, nrow, bboxes):
-        # counting from bottom, starting at 0
-        max_right = max([bbox.x1 for bbox in bboxes])
-        rightest_cells = list(filter(lambda x: self._equiv(x.x1, max_right), bboxes))
-        rightest_cells_top_to_bottom = sorted(rightest_cells, key=lambda x: x.y1)
-        return rightest_cells_top_to_bottom[-(nrow+1)]
-    
-    def get_mass_cell(self):
-        bboxes = self._get_cells()
-        second_row_rightest_cell = self._get_rightest_cell(2, bboxes)
-        return self._get_left_neighbour(second_row_rightest_cell, bboxes)
-    
-    def get_mass_header_cell(self):
-        bboxes = self._get_cells()
-        third_row_rightest_cell = self._get_rightest_cell(3, bboxes)
-        return self._get_left_neighbour(third_row_rightest_cell, bboxes)
-    
 def remove_text(img):
     return u.extract_contours(img)
 
 def get_lower_image(contour_img, consts:ImageConstants)->Bbox:
-    H, W = contour_img.shape
     t_vh = contour_img.copy()
     
     #  Standard Hough Line Transform
@@ -152,7 +32,6 @@ def get_lower_image(contour_img, consts:ImageConstants)->Bbox:
     lines = sorted(lines, key=mykey)
 
     horizontal_lines = [l for l in lines if np.abs(l[0][1] - math.pi/2) < 1e-4]
-
     horizontal_lines = sorted(horizontal_lines, key=lambda x: x[0][0], reverse=True)
 
     lower_lines = [horizontal_lines[0]]
@@ -224,9 +103,15 @@ def _get_first_approx_bbox(lower_img, consts):
     eps = consts.SAME_LINES_DIFF
     return Bbox(max(0,left_x-eps), 0, W, min(H,bottom_y+eps))
 
-def get_table(lower_img, consts)->Bbox:
+def get_table(img, consts)->Bbox:
+    t_vh = img.copy()
+    # get lower image
+    lower_img_bbox = get_lower_image(t_vh, consts)
+    lower_img = get_subimg(t_vh, lower_img_bbox)
+    # get table image
     first_approx_bbox = _get_first_approx_bbox(lower_img, consts)
     first_approx_img = get_subimg(lower_img, first_approx_bbox)
     table_bbox = _get_table_old(first_approx_img, consts)
     combined_bbox = combine_bboxes(mbbox=first_approx_bbox, rbbox=table_bbox)
-    return combined_bbox
+    # combine lower with table
+    return combine_bboxes(mbbox=lower_img_bbox, rbbox=combined_bbox)
