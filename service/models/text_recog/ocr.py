@@ -6,7 +6,7 @@ import cv2
 import pyocr.builders
 
 from .detection import crop_conturs, pil2cv, cv2pil
-
+from .show import show
 from imutils.object_detection import non_max_suppression
 
 
@@ -95,7 +95,7 @@ class MyBuilder(pyocr.builders.WordBoxBuilder):
                                   "tessedit_char_whitelist=0123456789Ø+*,.=x±RhHSmbKPT()"] + self.tesseract_configs
 
 
-def ocr(img):
+def ocr(img, visualize=False):
     img = erode(np.uint8(img), kernel=2)
     img = np.uint8(img)
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
@@ -110,19 +110,21 @@ def ocr(img):
     )
 
     img = pil2cv(img)
-    for wb in word_boxes:
-        (minx, miny), (maxx, maxy) = wb.position
-        cv2.rectangle(img, (minx, miny), (maxx, maxy), 128, 3)
-        cv2.putText(img, wb.content, (minx, miny - 15), cv2.FONT_HERSHEY_SIMPLEX,
-                    1, 128, 2)
+    if visualize:
+        for wb in word_boxes:
+            (minx, miny), (maxx, maxy) = wb.position
+            cv2.rectangle(img, (minx, miny), (maxx, maxy), 128, 3)
+            cv2.putText(img, wb.content, (minx, miny - 15), cv2.FONT_HERSHEY_SIMPLEX,
+                        1, 128, 2)
+        show(img)
     polys_np, labels = zip(*[convert(word_box) for word_box in word_boxes]) if word_boxes else ([], [])
 
     return polys_np, labels
 
 
-def rotated_ocr(img, angle):
+def rotated_ocr(img, angle, visualize=False):
     img = img.rotate(angle, expand=True)
-    polys_np, labels = ocr(img, PSM)
+    polys_np, labels = ocr(img, visualize)
     return labels
 
 
@@ -133,24 +135,18 @@ def dilate(cv_img, kernel=3):
 def erode(cv_img, kernel=3):
     return cv2.erode(cv_img, np.ones((kernel, kernel), np.uint8))
 
-
-def show(path):
-    img = cv2.imread(path)
-    return Image.fromarray(img)
-
-
-def recorgnize(img):
+def recorgnize(img, visualize=False):
     polys_np, rec_scores = [], []
     labels = {-90: [], 0: []}
     for i, angle in enumerate([0, -90]):
-        labels0 = rotated_ocr(img, angle, PSM)  # , builder=builder)
+        labels0 = rotated_ocr(img, angle, visualize)  # , builder=builder)
         labels[angle].extend(labels0)
     return labels
 
-def process(img):
+def process(img, visualize=False):
     img = process_for_getting_only_text(img)
     img = Image.fromarray(img)
-    labels = recorgnize(img, PSM)
+    labels = recorgnize(img, visualize)
     return labels
 
 
@@ -201,12 +197,12 @@ def get_linear_size(w):
         return maxsize
 
 
-def extract_sizes(pil_img):
+def extract_sizes(pil_img, visualize=False):
     recognized = {-90: [], 0: []}
     cv_img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2GRAY)
 
     for pic in crop_conturs(cv_img):
-        projection_recognized = process(pic)
+        projection_recognized = process(pic, visualize)
 
         for angled in projection_recognized:
             recognized[angled] += filt(projection_recognized[angled])
