@@ -1,102 +1,19 @@
-from PIL import Image
-
 import cv2
 import numpy as np
+from .detection import *
+from .show import show
 
-from pdf2image import convert_from_path
 
-
-def load_image_from_path(path):
-    # returns cv2 image
-    preprocess_img = lambda img: cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2GRAY)
-
-    img = convert_from_path(path)[0]
-    img = preprocess_img(img)
-
+def hough_cleaning(img):
+    img = img.copy()
+    edges = cv2.Canny(img, 150, 200, 3, 5)
+    lines = cv2.HoughLinesP(
+        edges, 1, np.pi / 180, threshold=100, minLineLength=30, maxLineGap=30)
+    if lines is not None:
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(img, (x1, y1), (x2, y2), (255, 255, 255), 10)
     return img
-
-
-def load_image_from_pil(pil_img):
-    # @param pil_img  image from pdf2img lib
-    # return cv2 image
-    preprocess_img = lambda img: cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2GRAY)
-    img = preprocess_img(pil_img)
-    return img
-
-
-def pil2cv(pil_img):
-    return cv2.cvtColor(np.asarray(pil_img), cv2.COLOR_RGB2GRAY)
-
-
-def cv2pil(cv_img):
-    return Image.fromarray(cv_img)
-
-
-def show(cv_img):
-    i = Image.fromarray(cv_img)
-    return i.resize((i.size[0] // 2, i.size[1] // 2))
-
-
-class RectsBank:
-    # nms provider
-    def __init__(self, intersec_lim=0.2):
-        self.rects = []
-        self.limit = intersec_lim
-
-    def intersects(self, bbox):
-        for bb in self.rects:
-            if self._intersection(bb, bbox) > self.limit:
-                return True
-        return False
-
-    def add(self, bbox):
-        self.rects.append(bbox)
-
-    def _intersection(self, b1, b2):
-        xa1, ya1, wa, ha = b1
-        xb1, yb1, wb, hb = b2
-        xa2, ya2 = xa1 + wa, ya1 + ha
-        xb2, yb2 = xb1 + wb, yb1 + hb
-
-        # i stands for intersection
-        xi1 = max(xa1, xb1)
-        yi1 = max(ya1, yb1)
-        xi2 = min(xa2, xb2)
-        yi2 = min(ya2, yb2)
-
-        wi = xi2 - xi1
-        hi = yi2 - yi1
-
-        if wi <= 0 or hi <= 0:
-            return 0.
-
-        area = wi * hi
-        minArea = min(wa * ha, wb * hb)
-        return area / minArea
-
-
-def get_white_area(thresh_img):
-    # finding conturs
-    contours, hierarchy = cv2.findContours(thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-    # find inner white area
-    get_area = lambda c: -c[2] * c[3]
-    contour_sizes = [(get_area(cv2.boundingRect(contour)), contour) for contour in contours]
-    sorted_contours = sorted(contour_sizes, key=lambda x: x[0])
-
-    mask = np.zeros(thresh_img.shape, dtype=np.uint8)
-    img_area = thresh_img.shape[0] * thresh_img.shape[1]
-    prev_contour = sorted_contours[0][1]
-    for c in sorted_contours:
-        if -c[0] / img_area < 0.5:
-            crop_contour = prev_contour
-            cv2.drawContours(mask, [crop_contour], -1, (255, 255, 255), cv2.FILLED)
-            thresh_img = cv2.bitwise_and(thresh_img, thresh_img, mask=mask)
-            thresh_img[mask == 0] = 255
-            return thresh_img
-        elif -cv2.contourArea(c[1]) / c[0] < 0.5:
-            continue
-        else:
-            prev_contour = c[1]
 
 
 def process_morph(img, kernel):
@@ -108,96 +25,230 @@ def process_morph(img, kernel):
     return img
 
 
-def find_conturs(cv_img):
-    # return list of conturs bboxes in format [((x, y), (x1, y1)), ... ]
-
-    # binarization
-    thresh_img = cv2.threshold(cv_img, thresh=200, maxval=255, type=cv2.THRESH_BINARY)[1]
-    # make contours thicker
-    contours, hierarchy = cv2.findContours(thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-    cv2.drawContours(thresh_img, contours, -1, 0, 3)
-    # get only inner area
-    thresh_img = get_white_area(thresh_img)
-
-    # finding contours
-    contours, hierarchy = cv2.findContours(thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-    bboxes = [cv2.boundingRect(c) for c in contours]
-    top_bboxes = sorted(bboxes, key=lambda b: -b[2] * b[3])
-
-    rects_drawn = RectsBank()
-    bboxes = []
-    clim = 5
-    c = 0
-    b = 25  # border size in pixels
-    for (x, y, w, h) in top_bboxes:
-        if w * h / cv_img.size < 0.6 and w * h / cv_img.size > 0.03:
-            # some kind of nms
-            if rects_drawn.intersects((x, y, w, h)):
-                # do not need submodules
-                continue
-            c += 1
-            rects_drawn.add((x, y, w, h))
-            bbox = ((x - b, y - b), (x + w + b, y + h + b))
-            bboxes.append(bbox)
-
-        if c >= clim:
-            break
-    return bboxes
-
-
-def crop_conturs(cv_img):
-    # returns list of detail images
-    details = []
-    bboxes = find_conturs(cv_img)
-    for c, bbox in enumerate(bboxes):
-        (x, y), (x1, y1) = bbox
-        detail = cv_img[y:y1, x:x1]
-        if detail.size > 0:
-            details.append(detail)
-    return details
-
-
-def get_img_with_padding(image):
-    COLOR = (255, 255, 255)
-    (H, W) = image.shape[:2]
-    pad_w = ((W + 31) // 32 * 32 - W + 32) // 2
-    pad_h = ((H + 31) // 32 * 32 - H + 32) // 2
-    image = cv2.copyMakeBorder(image, pad_h, pad_h, pad_w, pad_w, cv2.BORDER_CONSTANT, None, COLOR)
-
-    return image
-
-def get_contour(img, kernel=7):
-    # getting out if found no contours while iterations
-    if kernel == 1:
-        return None
-
-    # preprocess images
+def get_thick_contour(img, threshold=0.15, kernel_stick=55, kernel=7, fixKernel=False):
+    # преобразование для удаления тонких деталей с заданным ядром kernel.
+    # обычно успех достигается с ядром 3-4
     img_re = process_morph(img, kernel)
 
+    # все существующие контуры утолщаем как базу
     contours, hierarchy = cv2.findContours(img_re, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     cv2.drawContours(img_re, contours[1:], -1, 0, 5)
-    k = np.ones((55, 55))
-    k_d = np.ones((50, 50))
+
+    # преобразование для склеивания. ядро берется из параметров - по умолчанию 55,
+    # подобранное перебором оптимальное значение
+    k = np.ones((kernel_stick, kernel_stick))
 
     img_re = cv2.erode(img_re, kernel=k)
-    img_re = cv2.dilate(img_re, kernel=k_d)
+    img_re = cv2.dilate(img_re, kernel=k)
 
-    cv2.rectangle(img_re, (0, 0), (img_re.shape[1], img_re.shape[0]), (255, 255, 255), 5)
-    # find closed contours
+    # белая рамка для того, чтобы отсчечь контуры, прилипшие к краю.
+    cv2.rectangle(img_re, (0, 0), (img_re.shape[1], img_re.shape[0]), (255, 255, 255), 40)
+    # ищем замкнутые контуры
     contours, hierarchy = cv2.findContours(img_re, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 
-    # get out if we found nothing
-    if len(contours) < 2:
-        return get_contour(img, kernel - 1)
+    # если мы не нашли контуров, то идем на новую итерацию
+    if len(contours) < 2 and kernel > 1:
+        return get_thick_contour(img, kernel_stick=kernel_stick, threshold=threshold, kernel=kernel - 1)
+    elif len(contours) < 2 and kernel == 1:
+        return [], kernel
 
-    # get the biggest contour
+    # ищем максимальный по площади окружающего квадрата контур
     get_area = lambda c: -c[2] * c[3]
     contour_sizes = [(get_area(cv2.boundingRect(contour)), contour) for contour in contours]
     b_contour = sorted(contour_sizes, key=lambda x: x[0])[1]
 
-    if (-b_contour[0] / img.size > 0.15) or (
-            -b_contour[0] / img.size > 0.08 and ((-b_contour[0] - cv2.contourArea(b_contour[1])) / img.size < 0.1)):
-        return b_contour[1]
+    # выходим если мы достигли исходного изображения,
+    # или если найденный контур превосходит порог
+    # или если мы зафиксировали размер ядра (для уточнения)
+    if kernel == 1 or (-b_contour[0] / img.size > threshold) or fixKernel:
+        return b_contour[1], kernel
     else:
-        return get_contour(img, kernel - 1)
+        return get_thick_contour(img, kernel_stick=kernel_stick, threshold=threshold, kernel=kernel - 1)
+
+
+def get_detail_image(img, threshold=0.2, clean_small_size=2500, kernel_stick=55):
+    img_copy = img.copy()
+
+    # очищение мелких контуров, таких как буквы, размеры, символы.
+    contours, hierarchy = cv2.findContours(img_copy, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    for cnt in contours:
+        if cv2.contourArea(cnt) < clean_small_size:
+            cv2.drawContours(img_copy, [cnt], -1, 255, -1)
+
+    # Получение контура и маски изображения
+    contour, kernel = get_thick_contour(img_copy, threshold=threshold, kernel_stick=kernel_stick)
+    mask = np.ones(img_copy.shape, dtype=np.uint8) * 255
+    cv2.drawContours(mask, [contour], -1, (0, 0, 0), -1)
+    inner = cv2.bitwise_or(img, mask)
+    # уточнение контура с помощью эрозии с меньшим ядром. мы перебираем значения,
+    # пока не получим контур, близкий по площади к грубому. благодаря этому многий мусор отсекается.
+    kernel_loop = 11
+    precision_contour, _ = get_thick_contour(inner.copy(), kernel_stick=kernel_loop, threshold=threshold)
+
+    while cv2.contourArea(precision_contour) / cv2.contourArea(contour) < 0.7 or kernel_loop < 55:
+        precision_contour, _ = get_thick_contour(img_copy, kernel_stick=kernel_loop,
+                                                 threshold=threshold, kernel=kernel, fixKernel=True)
+        kernel_loop += 2
+
+    # omg = img.copy()
+    # cv2.drawContours(omg, precision_contour, -1, (128, 0, 0), 40)
+    # show(omg)
+
+    # получаем новую маску детали
+    mask = np.ones(img_copy.shape, dtype=np.uint8) * 255
+    cv2.drawContours(mask, [precision_contour], -1, (0, 0, 0), -1)
+    inner = cv2.bitwise_or(img, mask)
+
+    # получаем максимальный внешний контур
+    contours, hierarchy = cv2.findContours(inner, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+
+
+    contour_sizes = [(cv2.contourArea(contour), contour) for contour in contours]
+    if len(contour_sizes)>1:
+        b_contour_area, contour = sorted(contour_sizes, key=lambda x: x[0], reverse=True)[1]
+    else:
+        b_contour_area, contour = sorted(contour_sizes, key=lambda x: x[0], reverse=True)[0]
+
+
+    if b_contour_area / cv2.contourArea(precision_contour) < 0.8:
+        contour = precision_contour
+    # возвращаем обрезанное по контуру изображение и сам контур
+    return inner, contour
+
+
+# get circles
+def hough_circle(img):
+    img = hough_cleaning(img)
+    rows = img.shape[0]
+    circles = cv2.HoughCircles(img, cv2.HOUGH_GRADIENT, 1, rows / 8,
+                               param1=100, param2=30,
+                               minRadius=2, maxRadius=400)
+    return circles
+
+
+def draw_circles(img, circles, color, thickness):
+    if circles is not None:
+        circles = np.uint16(np.around(circles))
+        for i in circles[0, :]:
+            center = (i[0], i[1])
+            # circle outline
+            radius = i[2]
+            cv2.circle(img, center, radius, color, thickness)
+
+
+def get_inner_thick(img, kernel=6):
+    # preprocess images
+    img_re = process_morph(img, kernel)
+    img = hough_cleaning(img)
+    # finding and make thicker closed contours
+    contours, hierarchy = cv2.findContours(img_re, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    cv2.drawContours(img_re, contours[1:], -1, 0, 5)
+
+    # make white border
+    cv2.rectangle(img_re, (0, 0), (img_re.shape[1], img_re.shape[0]), (255, 255, 255), 5)
+
+    # find closed contours
+    contours, hierarchy = cv2.findContours(img_re, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+
+    contours = list(filter(lambda cnt: cv2.contourArea(cnt) > 1000, contours))
+    # get out if we found nothing
+    if len(contours) < 2 and kernel > 1:
+        return get_inner_thick(img, kernel=kernel - 1)
+
+    else:
+        return contours[1:]
+
+
+def get_detail_inner(img, contour, isCircle=False):
+    img = img.copy()
+    cv2.drawContours(img, contour, -1, 255, 20)
+
+    if isCircle:
+        contours = hough_circle(img.copy())
+    else:
+        contours = get_inner_thick(img)
+    return contours
+
+
+def draw_inner(img, cntr, isCircle, color=(128, 128, 128), thickness=5):
+    if isCircle:
+        draw_circles(img, cntr, color, thickness)
+    else:
+        cv2.drawContours(img, cntr, -1, color, thickness)
+
+
+def get_arrows(img):
+    img = img.copy()
+    edges = cv2.Canny(img, 150, 200, 3, 5)
+    lines = cv2.HoughLinesP(
+        edges, 1, np.pi / 180, threshold=100, minLineLength=30, maxLineGap=30)
+    return lines
+
+
+def draw_lines(img, lines, color):
+    if lines is not None:
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(img, (x1, y1), (x2, y2), color, 10)
+
+
+def get_contours(img, outer, inner, arrows):
+    detail, outer_contour = get_detail_image(img)
+    if inner:
+        # get holes. flag isCircle for better detecting circle-shape holes
+        isCircle = True
+        inner_contour = get_detail_inner(detail, outer_contour, isCircle)
+    else:
+        inner_contour = None
+    # get holes via remove all predicted detail contours
+    if arrows:
+        arrows_img = img.copy()
+        cv2.drawContours(arrows_img, outer_contour, -1, 255, 20)
+        cv2.drawContours(arrows_img, [outer_contour], -1, 255, -1)
+        draw_inner(arrows_img, inner_contour, isCircle, 255)
+        lines = get_arrows(arrows_img)
+    else:
+        lines = None
+    if not outer:
+        outer_contour = None
+    return outer_contour, inner_contour, lines
+
+
+def draw_detail_contours(img, outer=None, inner=None, isCircle=True, arrows=None):
+    if outer is not None:
+        cv2.drawContours(img, outer, -1, (0, 0, 255), 5)
+    if inner is not None:
+        draw_inner(img, inner, isCircle, color=(255, 0, 0))
+    if arrows is not None:
+        draw_lines(img, arrows, (0, 255, 0))
+    return img
+
+
+def get_draw_countours(img, outer=False, inner=False, arrows=False):
+    outer_contour, inner_contour, arrows = get_contours(img, outer, inner, arrows)
+    return draw_detail_contours(img, outer_contour, inner_contour, True, arrows)
+
+
+def get_contours_info(img, visualize=False):
+    projections = crop_conturs(img)
+    try:
+        if visualize and projections is not None:
+            for proj in projections:
+                # show(proj)
+                get_draw_countours(proj, outer=True, inner=True)
+        if projections is not None:
+            projection_number = len(projections)
+        else:
+            projection_number = 0
+        if projection_number>0:
+            contours_lens = [cv2.arcLength(get_thick_contour(proj)[0],True) for proj in projections]
+        else:
+            contours_lens = np.NaN
+        if projection_number>0 and hough_circle(projections[0]) is not None:
+            holes_number = len(hough_circle(projections[0]))
+        else:
+            holes_number = 0
+        return [projection_number, contours_lens, holes_number]
+    except Exception as e:
+        print ("countours", e)
+        return [np.NaN, np.NaN, np.NaN]
