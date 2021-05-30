@@ -58,9 +58,6 @@ def get_thick_contour(img, threshold=0.15, kernel_stick=55, kernel=7, fixKernel=
     contour_sizes = [(get_area(cv2.boundingRect(contour)), contour) for contour in contours]
     b_contour = sorted(contour_sizes, key=lambda x: x[0])[1]
 
-    # print(-b_contour[0] / img.size, kernel_stick)
-    # cv2.drawContours(img_re, b_contour[1], -1, (128, 0, 0), 5)
-    # show(img_re)
 
     # выходим если мы достигли исходного изображения,
     # или если найденный контур превосходит порог
@@ -73,14 +70,6 @@ def get_thick_contour(img, threshold=0.15, kernel_stick=55, kernel=7, fixKernel=
 
 def get_detail_image(img, threshold=0.2, clean_small_size=0, kernel_stick=55):
     img_copy = img.copy()
-    show(img_copy)
-    # omg = img.copy()
-    # omg = process_morph(omg, 2)
-    # contours, hierarchy = cv2.findContours(omg, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-    # cv2.drawContours(omg, contours, -1, (128, 0, 0), 60)
-    # print("prec")
-    # show(omg)
-
     # очищение мелких контуров, таких как буквы, размеры, символы.
     contours, hierarchy = cv2.findContours(img_copy, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     for cnt in contours:
@@ -101,7 +90,6 @@ def get_detail_image(img, threshold=0.2, clean_small_size=0, kernel_stick=55):
         precision_contour, _ = get_thick_contour(img_copy, kernel_stick=kernel_loop,
                                                  threshold=threshold, kernel=kernel, fixKernel=True)
         kernel_loop += 2
-
 
     # получаем новую маску детали
     mask = np.ones(img_copy.shape, dtype=np.uint8) * 255
