@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import numpy as np
-
+import cv2
 
 @dataclass
 class Bbox:
@@ -29,3 +29,17 @@ class TextBbox:
 
     def __str__(self): return f'{self.bbox}: text=[{self.text}]'
     def __repr__(self): return str(self)
+
+def get_bbox(contour):
+    bbox = cv2.boundingRect(contour)
+    x0,y0,w,h = bbox
+    return Bbox(x0, y0, x0+w, y0 + h)
+
+def get_subimg(img, bbox:Bbox):
+    return img[bbox.y0:bbox.y1, bbox.x0:bbox.x1]
+
+def combine_bboxes(mbbox, rbbox):
+    # mbbox in main bbox
+    # rbbox is relative to mbbox
+    x0, y0 = mbbox.x0, mbbox.y0
+    return Bbox(x0+rbbox.x0, y0+rbbox.y0, x0+rbbox.x1, y0+rbbox.y1)
